@@ -3,21 +3,21 @@
 + Shoot projectiles
 + Dodge enemy projectiles
 + Collect resources while doing so
-+ Use resources to spawn more units
++ Spawn or upgrade units
 
-Simple, right?
 #### How will this work with bots?
-Apart from the math needed to dodge enemy projectiles, lots of decision-making is needed:
+Apart from the math needed to dodge (multiple) enemy projectiles, lots of decision-making is needed:
 + Should I get hit on purpose to collect a resource?
 + How should I shoot to make the enemy run into it / waste time dodging it?
-+ What distance should I keep? (nearer = harder to dodge projectiles)
++ Should a unit "buddyblock" for another unit?
 + Can I shoot with multiple units to create a "wall" of projectiles (that the enemy cannot dodge)?
 
 #### Other game mechanics:
-+ No collision (simplifies pathing)
-+ Duplicate units with resources (newly created clone spawning at position of existing unit)
-+ Limited map size (circle)
-+ (Randomly generated stats, like projectile speed, movement speed, hitbox size, ... for each unit)
++ No collision. Moving all units as one may be strong but you won't be able to collect ressources as fast
++ Create units with collected resources
++ Exchange stats with resources (e.g. Health <=> Projectile speed)
++ Collect healing orbs
++ Going out of the map damages units
 
 #### Who wins?
 I have a few ideas regarding this:
@@ -26,12 +26,10 @@ I have a few ideas regarding this:
 + Normal competition at the end
 
 #### Development
-Can be done however you want. You get the packet specification and maybe a library for a few select languages. You also get:
+Can be done however you want. You get the packet specification (mostly JSON) and maybe a library for a few select languages. You also get:
 + A spectator client (to spectate own / other matches)
 + (A local server)
 
 ![](http://i.imgur.com/jbp2wHQ.png)
 
-
-
-
+## Please join the discussion in the issues!
