@@ -1,4 +1,6 @@
 # Evaders (Coding challenge idea)
+Evaders is a game completely made for and played by bots. The author of the best bot (on the day the challenge ends) is the winner.
+
 #### Basically:
 + Shoot projectiles
 + Dodge enemy projectiles
