@@ -1,0 +1,7 @@
+C:\Users\Nino\Documents\Projects\Evaders\Evaders.Server\bin\Debug\Evaders.Server.dll
+C:\Users\Nino\Documents\Projects\Evaders\Evaders.Server\bin\Debug\Evaders.Server.pdb
+C:\Users\Nino\Documents\Projects\Evaders\Evaders.Server\obj\Debug\Evaders.Server.csprojResolveAssemblyReference.cache
+C:\Users\Nino\Documents\Projects\Evaders\Evaders.Server\obj\Debug\Evaders.Server.dll
+C:\Users\Nino\Documents\Projects\Evaders\Evaders.Server\obj\Debug\Evaders.Server.pdb
+C:\Users\Nino\Documents\Projects\Evaders\Evaders.Server\bin\Debug\Evaders.Core.dll
+C:\Users\Nino\Documents\Projects\Evaders\Evaders.Server\bin\Debug\Evaders.Core.pdb

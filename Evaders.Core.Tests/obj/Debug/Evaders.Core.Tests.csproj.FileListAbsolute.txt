@@ -1,0 +1,9 @@
+C:\Users\Nino\Documents\Projects\Evaders\Evaders.Core.Tests\bin\Debug\Evaders.Core.Tests.dll
+C:\Users\Nino\Documents\Projects\Evaders\Evaders.Core.Tests\bin\Debug\Evaders.Core.Tests.pdb
+C:\Users\Nino\Documents\Projects\Evaders\Evaders.Core.Tests\bin\Debug\Evaders.Core.dll
+C:\Users\Nino\Documents\Projects\Evaders\Evaders.Core.Tests\bin\Debug\nunit.framework.dll
+C:\Users\Nino\Documents\Projects\Evaders\Evaders.Core.Tests\bin\Debug\Evaders.Core.pdb
+C:\Users\Nino\Documents\Projects\Evaders\Evaders.Core.Tests\bin\Debug\nunit.framework.xml
+C:\Users\Nino\Documents\Projects\Evaders\Evaders.Core.Tests\obj\Debug\Evaders.Core.Tests.csprojResolveAssemblyReference.cache
+C:\Users\Nino\Documents\Projects\Evaders\Evaders.Core.Tests\obj\Debug\Evaders.Core.Tests.dll
+C:\Users\Nino\Documents\Projects\Evaders\Evaders.Core.Tests\obj\Debug\Evaders.Core.Tests.pdb

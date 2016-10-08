@@ -1,0 +1,8 @@
+C:\Users\Nino\Documents\Projects\Evaders\Evaders.ServerRunner.Windows\bin\Debug\Evaders.ServerRunner.Windows.exe.config
+C:\Users\Nino\Documents\Projects\Evaders\Evaders.ServerRunner.Windows\bin\Debug\Evaders.ServerRunner.Windows.exe
+C:\Users\Nino\Documents\Projects\Evaders\Evaders.ServerRunner.Windows\bin\Debug\Evaders.ServerRunner.Windows.pdb
+C:\Users\Nino\Documents\Projects\Evaders\Evaders.ServerRunner.Windows\obj\Debug\Evaders.ServerRunner.Windows.csprojResolveAssemblyReference.cache
+C:\Users\Nino\Documents\Projects\Evaders\Evaders.ServerRunner.Windows\obj\Debug\Evaders.ServerRunner.Windows.exe
+C:\Users\Nino\Documents\Projects\Evaders\Evaders.ServerRunner.Windows\obj\Debug\Evaders.ServerRunner.Windows.pdb
+C:\Users\Nino\Documents\Projects\Evaders\Evaders.ServerRunner.Windows\bin\Debug\Evaders.Server.dll
+C:\Users\Nino\Documents\Projects\Evaders\Evaders.ServerRunner.Windows\bin\Debug\Evaders.Server.pdb
