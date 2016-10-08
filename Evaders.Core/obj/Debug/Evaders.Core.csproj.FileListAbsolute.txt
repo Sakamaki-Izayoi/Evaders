@@ -1,5 +1,0 @@
-C:\Users\Nino\Documents\Projects\Evaders\Evaders.Core\bin\Debug\Evaders.Core.dll
-C:\Users\Nino\Documents\Projects\Evaders\Evaders.Core\bin\Debug\Evaders.Core.pdb
-C:\Users\Nino\Documents\Projects\Evaders\Evaders.Core\obj\Debug\Evaders.Core.csprojResolveAssemblyReference.cache
-C:\Users\Nino\Documents\Projects\Evaders\Evaders.Core\obj\Debug\Evaders.Core.dll
-C:\Users\Nino\Documents\Projects\Evaders\Evaders.Core\obj\Debug\Evaders.Core.pdb
