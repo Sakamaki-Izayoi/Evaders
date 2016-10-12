@@ -39,8 +39,20 @@
     <None Include="project.json" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="Utility\EasySocket.cs" />
+    <Compile Include="Game\CharacterData.cs" />
+    <Compile Include="Game\Entity.cs" />
+    <Compile Include="Game\Game.cs" />
+    <Compile Include="Game\GameActionType.cs" />
+    <Compile Include="Game\GameAction.cs" />
+    <Compile Include="Networking\PacketParser.cs" />
+    <Compile Include="Utility\GameContractresolver.cs" />
+    <Compile Include="Game\GameSettings.cs" />
+    <Compile Include="Game\IGameSupervisor.cs" />
+    <Compile Include="Game\IUser.cs" />
+    <Compile Include="Game\Projectile.cs" />
+    <Compile Include="Networking\EasySocket.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="Utility\ILogger.cs" />
     <Compile Include="Utility\Vector2.cs" />
   </ItemGroup>
   <Import Project="$(MSBuildExtensionsPath32)\Microsoft\Portable\$(TargetFrameworkVersion)\Microsoft.Portable.CSharp.targets" />
