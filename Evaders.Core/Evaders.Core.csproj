@@ -44,10 +44,10 @@
     <Compile Include="Game\Game.cs" />
     <Compile Include="Game\GameActionType.cs" />
     <Compile Include="Game\GameAction.cs" />
+    <Compile Include="Networking\Packet.cs" />
     <Compile Include="Networking\PacketParser.cs" />
     <Compile Include="Utility\GameContractresolver.cs" />
     <Compile Include="Game\GameSettings.cs" />
-    <Compile Include="Game\IGameSupervisor.cs" />
     <Compile Include="Game\IUser.cs" />
     <Compile Include="Game\Projectile.cs" />
     <Compile Include="Networking\EasySocket.cs" />

@@ -6,7 +6,7 @@
     using Newtonsoft.Json;
     using Utility;
 
-    public class Game<TUser> where TUser : IUser
+    public abstract class Game<TUser> where TUser : IUser
     {
         public float TimePerFrameSec => 1000f/Settings.FramesPerSecond;
         public bool GameEnded => Entities.All(entity => entity.PlayerIdentifier == Entities.FirstOrDefault()?.PlayerIdentifier);
@@ -15,27 +15,21 @@
         public IReadOnlyList<Projectile<TUser>> ValidProjectiles => Projectiles;
         private readonly long _entityIdentifier;
 
-        private readonly IGameSupervisor<TUser> _supervisor;
         private readonly List<Entity<TUser>> _toRemoveEntities = new List<Entity<TUser>>();
         private readonly List<Projectile<TUser>> _toRemoveProjectiles = new List<Projectile<TUser>>();
         private readonly Dictionary<TUser, List<GameAction>> _users;
-
         [JsonProperty] internal readonly List<Entity<TUser>> Entities = new List<Entity<TUser>>();
-
         public readonly long Identifier;
-
         [JsonProperty] internal readonly List<Projectile<TUser>> Projectiles = new List<Projectile<TUser>>();
 
         public readonly GameSettings Settings;
         private long _projectileIdentifier;
-
         public int Frame;
 
-        public Game(IEnumerable<TUser> users, GameSettings settings, long gameIdentifier, IGameSupervisor<TUser> supervisor)
+        public Game(IEnumerable<TUser> users, GameSettings settings, long gameIdentifier)
         {
             Settings = settings;
             Identifier = gameIdentifier;
-            _supervisor = supervisor;
             _users = users.ToDictionary(item => item, item => new List<GameAction>());
 
             var unitUp = new Vector2(0, -1);
@@ -57,12 +51,12 @@
                     var controlledEntity = Entities.FirstOrDefault(item => item.EntityIdentifier == gameAction.ControlledEntityIdentifier);
                     if (controlledEntity == null)
                     {
-                        _supervisor.OnIllegalAction(this, user.Key, "You are controlling a not existing entity: " + gameAction.ControlledEntityIdentifier);
+                        OnIllegalAction(user.Key, "You are controlling a not existing entity: " + gameAction.ControlledEntityIdentifier);
                         continue;
                     }
                     if (controlledEntity.PlayerIdentifier != user.Key.Identifier)
                     {
-                        _supervisor.OnIllegalAction(this, user.Key, "You cannot control an enemy untit :)");
+                        OnIllegalAction(user.Key, "You cannot control an enemy untit :)");
                         continue;
                     }
 
@@ -76,11 +70,13 @@
                             result = controlledEntity.Shoot(gameAction.Position);
                             break;
                         default:
-                            _supervisor.OnIllegalAction(this, user.Key, "Unknown Action: " + (int) gameAction.Type);
+                            OnIllegalAction(user.Key, "Unknown Action: " + (int) gameAction.Type);
                             continue;
                     }
                     if (!result)
-                        _supervisor.OnIllegalAction(this, user.Key, "Illegal action: " + gameAction);
+                        OnIllegalAction(user.Key, "Illegal action: " + gameAction);
+                    else
+                        OnActionExecuted(user.Key, gameAction);
                 }
 
 
@@ -100,16 +96,14 @@
                 keyValuePair.Value.Clear();
 
             if (GameEnded)
-                _supervisor.OnGameEnd(this);
+                OnGameEnd();
             else
-                _supervisor.OnTurnEnded(this);
+                OnTurnEnded();
         }
-
-        internal long GenerateProjectileIdentifier() => _projectileIdentifier++;
 
         public void AddAction(TUser from, GameAction action)
         {
-            if (!_supervisor.ShouldHandleAction(this, @from, action))
+            if (!ShouldHandleAction(@from, action))
                 return;
 
             _users[from].Add(action);
@@ -133,5 +127,17 @@
             foreach (var projectile in Projectiles)
                 projectile.Game = this;
         }
+
+        protected abstract void OnActionExecuted(TUser @from, GameAction action);
+
+        protected abstract void OnTurnEnded();
+
+        protected abstract void OnGameEnd();
+
+        protected abstract void OnIllegalAction(TUser user, string warningMsg);
+
+        protected abstract bool ShouldHandleAction(TUser @from, GameAction action);
+
+        internal long GenerateProjectileIdentifier() => _projectileIdentifier++;
     }
 }
