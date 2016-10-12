@@ -1,4 +1,4 @@
-﻿namespace Evaders.Network
+﻿namespace Evaders.Core.Networking
 {
     using Newtonsoft.Json;
 
@@ -32,7 +32,6 @@
         public PacketTypeS2C TypeS2C => (PacketTypeS2C) Type;
         public PacketTypeC2S TypeC2S => (PacketTypeC2S) Type;
         public readonly object Payload;
-
         public readonly int Type;
 
         public Packet(PacketTypeC2S type, object payload)
@@ -41,7 +40,7 @@
             Payload = payload;
         }
 
-        internal Packet(PacketTypeS2C type, object payload)
+        public Packet(PacketTypeS2C type, object payload)
         {
             Type = (int) type;
             Payload = payload;
