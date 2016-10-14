@@ -14,5 +14,10 @@
             Position = position;
             ControlledEntityIdentifier = controlledEntityIdentifier;
         }
+
+        public override string ToString()
+        {
+            return $"{{[{ControlledEntityIdentifier}] {Type}: {Position}}}";
+        }
     }
 }

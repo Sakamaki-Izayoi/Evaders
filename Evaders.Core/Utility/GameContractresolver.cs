@@ -6,7 +6,7 @@
     using Newtonsoft.Json;
     using Newtonsoft.Json.Serialization;
 
-    internal class GameContractResolver : DefaultContractResolver
+    public class GameContractResolver : DefaultContractResolver
     {
         protected override IList<JsonProperty> CreateProperties(Type type, MemberSerialization memberSerialization)
         {

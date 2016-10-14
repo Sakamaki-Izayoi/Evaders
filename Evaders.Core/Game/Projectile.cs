@@ -1,29 +1,38 @@
 ﻿namespace Evaders.Core.Game
 {
+    using System;
+    using Newtonsoft.Json;
     using Utility;
 
     public class Projectile<TUser> where TUser : IUser //todo: make non generic IGame interface that supplies the nessecary properties
     {
-        public readonly float Damage;
+        [JsonProperty]
+        public Vector2 Position { get; internal set; }
+
+        public readonly int Damage;
+        public readonly Vector2 Direction;
         public readonly long EntityIdentifier;
-        public readonly float HitboxRadius;
-        public readonly Vector2 MovingTo;
+        public readonly int HitboxRadius;
+        public readonly int LifeEndFrame;
         public readonly long PlayerIdentifier;
         public readonly long ProjectileIdentifier;
-        public readonly float ProjectileSpeedSec;
+        public readonly double ProjectileSpeedSec;
 
         internal Game<TUser> Game;
-        public Vector2 Position;
 
-        internal Projectile(Vector2 movingTo, Entity<TUser> entity, Game<TUser> game, long projectileIdentifier)
+        internal Projectile(Vector2 direction, Entity<TUser> entity, Game<TUser> game, long projectileIdentifier, int lifeEndFrame)
         {
-            Position = entity.Position.Extended(movingTo, entity.CharData.HitboxSize + entity.CharData.ProjectileHitboxSize);
-            MovingTo = movingTo;
+            if (!direction.IsUnitVector)
+                throw new ArgumentException("Not a direction (unit vector)", nameof(direction));
+
+            Position = entity.Position.Extended(direction, entity.CharData.HitboxSize + entity.CharData.ProjectileHitboxSize);
+            Direction = direction;
             HitboxRadius = entity.CharData.ProjectileHitboxSize;
             Damage = entity.CharData.ProjectileDamage;
             PlayerIdentifier = entity.PlayerIdentifier;
             EntityIdentifier = entity.EntityIdentifier;
             ProjectileIdentifier = projectileIdentifier;
+            LifeEndFrame = lifeEndFrame;
             ProjectileSpeedSec = entity.CharData.ProjectileSpeedSec;
 
             Game = game;
@@ -31,9 +40,15 @@
 
         public void Update()
         {
-            Position.Extend(MovingTo, ProjectileSpeedSec*Game.TimePerFrameSec);
+            if (Game.Frame >= LifeEndFrame)
+            {
+                Game.RemoveAfterFrame(this);
+                return;
+            }
+
+            Position = Position + Direction*ProjectileSpeedSec*Game.TimePerFrameSec;
             foreach (var entity in Game.Entities)
-                if (entity.PlayerIdentifier != PlayerIdentifier && entity.Position.Distance(Position, true) < (HitboxRadius + entity.CharData.HitboxSize)*(HitboxRadius + entity.CharData.HitboxSize))
+                if (entity.PlayerIdentifier != PlayerIdentifier && entity.Position.Distance(Position, true) <= (HitboxRadius + entity.CharData.HitboxSize)*(HitboxRadius + entity.CharData.HitboxSize))
                 {
                     Game.RemoveAfterFrame(this);
                     if ((entity.Health -= Damage) <= 0)

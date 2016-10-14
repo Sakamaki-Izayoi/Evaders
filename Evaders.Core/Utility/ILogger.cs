@@ -11,6 +11,6 @@
 
     public interface ILogger
     {
-        void Write(string text, Severity severity);
+        void Write(string text, Severity severity = Severity.Info);
     }
 }

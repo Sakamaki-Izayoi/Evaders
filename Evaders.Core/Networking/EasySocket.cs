@@ -67,6 +67,12 @@
             Socket = socket;
         }
 
+        public void Dispose()
+        {
+            StopJobs();
+            Socket.Dispose();
+        }
+
         public bool StartJobs(SocketTasks tasks)
         {
             if (_stopped || Started)
@@ -277,12 +283,6 @@
         public static bool operator !=(EasySocket @this, EasySocket other)
         {
             return @this?.Socket != other?.Socket;
-        }
-
-        public void Dispose()
-        {
-            StopJobs();
-            Socket.Dispose();
         }
     }
 }

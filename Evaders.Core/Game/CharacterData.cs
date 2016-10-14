@@ -4,14 +4,14 @@
     {
         public bool IsValid => MaxHealth > 0 && ProjectileSpeedSec > 0 && ProjectileDamage > 0 && ProjectileHitboxSize > 0 && ReloadDelaySec > 0 && HitboxSize > 0 && SpeedSec > 0;
         public readonly int HitboxSize;
-        public readonly float MaxHealth;
-        public readonly float ProjectileDamage;
-        public readonly float ProjectileHitboxSize;
-        public readonly float ProjectileSpeedSec;
-        public readonly float ReloadDelaySec;
-        public readonly float SpeedSec;
+        public readonly int MaxHealth;
+        public readonly int ProjectileDamage;
+        public readonly int ProjectileHitboxSize;
+        public readonly double ProjectileSpeedSec;
+        public readonly double ReloadDelaySec;
+        public readonly double SpeedSec;
 
-        public CharacterData(float maxHealth, float projectileDamage, float projectileHitboxSize, float reloadDelaySec, int hitboxSize, float projectileSpeedSec, float speedSec)
+        public CharacterData(int maxHealth, int projectileDamage, int projectileHitboxSize, double reloadDelaySec, int hitboxSize, double projectileSpeedSec, double speedSec)
         {
             MaxHealth = maxHealth;
             ProjectileDamage = projectileDamage;

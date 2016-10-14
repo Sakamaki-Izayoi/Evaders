@@ -1,9 +1,11 @@
 ﻿namespace Evaders.Core.Networking
 {
     using Newtonsoft.Json;
+    using Newtonsoft.Json.Converters;
 
     public class Packet
     {
+        [JsonConverter(typeof (StringEnumConverter))]
         public enum PacketTypeC2S
         {
             Authorize,
@@ -15,12 +17,12 @@
             SwitchQueueMode
         }
 
+        [JsonConverter(typeof (StringEnumConverter))]
         public enum PacketTypeS2C
         {
             AuthState,
             Kick,
-            MoveTo,
-            ShootProjectile,
+            GameAction,
             IllegalAction,
             NextRound,
             GameState,
