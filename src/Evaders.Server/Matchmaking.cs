@@ -6,6 +6,7 @@
     using System.Linq;
     using Core.Utility;
     using Extensions;
+    using Microsoft.Extensions.Logging;
 
     public class Matchmaking : IMatchmaking
     {
@@ -60,11 +61,11 @@
                         }
                         if (bestHoomanBot == null)
                         {
-                            _logger.Write($"{GetType().Name}: {_supervisor.GetType()} gave me an invalid GUID as best choice!", Severity.Error);
+                            _logger.LogError($"{GetType().Name}: {_supervisor.GetType()} gave me an invalid GUID as best choice!");
                             continue;
                         }
 
-                        _logger.Write($"{_inQueue[i]} found a match: {bestHoomanBot})", Severity.Debug);
+                        _logger.LogDebug($"{_inQueue[i]} found a match: {bestHoomanBot})");
                         OnSuggested?.Invoke(this, new MatchCreatedArgs(this, bestHoomanBot, _inQueue[i]));
                     }
                     else
@@ -74,11 +75,11 @@
 
                         if (bestBotBot == null)
                         {
-                            _logger.Write($"{GetType().Name}: {_supervisor.GetType()} gave me an invalid GUID as best choice!", Severity.Error);
+                            _logger.LogError($"{GetType().Name}: {_supervisor.GetType()} gave me an invalid GUID as best choice!");
                             continue;
                         }
 
-                        _logger.Write($"{_inQueue[i]} exceeded max queue time, matching with bot: {bestBotBot})", Severity.Debug);
+                        _logger.LogDebug($"{_inQueue[i]} exceeded max queue time, matching with bot: {bestBotBot})");
                         OnSuggested?.Invoke(this, new MatchCreatedArgs(this, bestBotBot, _inQueue[i]));
                     }
                 }
@@ -100,10 +101,10 @@
                 var bestBotBot = _inQueue.FirstOrDefault(bot => bot.Login == bestMatch);
 
                 if (bestBotBot == null)
-                    _logger.Write($"{GetType().Name}: {_supervisor.GetType()} gave me an invalid GUID as best choice!", Severity.Error);
+                    _logger.LogError($"{GetType().Name}: {_supervisor.GetType()} gave me an invalid GUID as best choice!");
                 else
                 {
-                    _logger.Write($"Found a match (Queue very empty for a longer time, matching with bot: {bestBotBot})", Severity.Debug);
+                    _logger.LogDebug($"Found a match (Queue very empty for a longer time, matching with bot: {bestBotBot})");
                     OnSuggested?.Invoke(this, new MatchCreatedArgs(this, user, bestBotBot));
                     return;
                 }
@@ -117,7 +118,7 @@
             var autoBestMatch = _inQueue.FirstOrDefault(usr => usr != user && !usr.HasEverPlayedAgainst(user, _supervisor));
             if (autoBestMatch != null)
             {
-                _logger.Write($"Found a match (never played against {autoBestMatch})", Severity.Debug);
+                _logger.LogDebug($"Found a match (never played against {autoBestMatch})");
                 OnSuggested?.Invoke(this, new MatchCreatedArgs(this, autoBestMatch, user));
             }
         }
@@ -125,20 +126,20 @@
         public void LeaveQueue(IServerUser user)
         {
             _inQueue.Remove(user);
-            _logger.Write($"{user} left matchmaking", Severity.Debug);
+            _logger.LogDebug($"{user} left matchmaking");
         }
 
         public void LeaveQueueCompletely(IServerUser user)
         {
             _inQueue.RemoveAll(usr => usr == user);
-            _logger.Write($"{user} left matchmaking completely", Severity.Debug);
+            _logger.LogDebug($"{user} left matchmaking completely");
         }
 
         private void AddUser(IServerUser user)
         {
             _inQueue.Add(user);
             _joinedQueueTime[user] = _time.Elapsed.TotalMilliseconds;
-            _logger.Write($"{user} entered matchmaking", Severity.Debug);
+            _logger.LogDebug($"{user} entered matchmaking");
         }
     }
 }

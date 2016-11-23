@@ -8,6 +8,7 @@
     using CommonNetworking;
     using CommonNetworking.CommonPayloads;
     using Core.Utility;
+    using Microsoft.Extensions.Logging;
     using Payloads;
 
     public class EvadersServer : IServer, IRulesProvider
@@ -38,14 +39,14 @@
             _config = config;
 
 
-            logger.Write("Setting up tcp accept socket");
+            logger.LogInformation("Setting up tcp accept socket");
             var listener = new TcpListener(IPAddress.Parse(config.IP), config.Port);
             listener.Start();
             _serverSocket = new EasySocket(listener.Server);
             _serverSocket.OnAccepted += OnClientConnected;
             if (!_serverSocket.StartJobs(EasySocket.SocketTasks.Accept))
                 throw new Exception("Could not start network jobs");
-            logger.Write("Server online!");
+            logger.LogInformation("Server online!");
         }
 
         void IServer.HandleUserAction(IServerUser @from, LiveGameAction action)
@@ -109,8 +110,8 @@
         {
             if (!_runningGames.ContainsKey(gameIdentifier))
             {
-                _logger.Write("User tried resyncing in an unknown game: " + gameIdentifier, Severity.Warning);
-                user.IllegalAction("Cannot resync in game: " + gameIdentifier + ", because it does not exist!");
+                _logger.LogWarning($"User tried resyncing in an unknown game: {gameIdentifier}");
+                user.IllegalAction($"Cannot resync in game: {gameIdentifier}, because it does not exist!");
                 return;
             }
             _runningGames[gameIdentifier].HandleReconnect(user);
@@ -168,11 +169,11 @@
                 {
                     if (!connectedUser.Disposed)
                     {
-                        _logger.Write($"Kicking user due to exception: {exception}", Severity.Warning);
+                        _logger.LogWarning($"Kicking user due to exception: {exception}");
                         connectedUser.Dispose();
                     }
                     else
-                        _logger.Write($"Removing disconnected user: {connectedUser}", Severity.Debug);
+                        _logger.LogDebug($"Removing disconnected user: {connectedUser}");
 
                     _connectedUsers.Remove(connectedUser);
                     index--;

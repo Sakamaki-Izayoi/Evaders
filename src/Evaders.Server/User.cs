@@ -9,6 +9,7 @@
     using CommonNetworking;
     using CommonNetworking.CommonPayloads;
     using Core.Utility;
+    using Microsoft.Extensions.Logging;
     using Newtonsoft.Json;
 
     internal class User : IServerUser
@@ -129,7 +130,7 @@
         {
             if (socketAsyncEventArgs.BytesTransferred != socketAsyncEventArgs.Count)
             {
-                _logger.Write($"{this} disconnected");
+                _logger.LogInformation($"{this} disconnected");
                 _server.Kick(this);
             }
         }
@@ -138,11 +139,11 @@
         {
             if (!Authorized && packet.Type != Packet.PacketTypeC2S.Authorize)
             {
-                _logger.Write($"{this} tried to send unauthorized packets!", Severity.Debug);
+                _logger.LogDebug($"{this} tried to send unauthorized packets!");
                 IllegalAction("Please authorize first!");
                 return;
             }
-            _logger.Write($"{this} sent packet: {packet.Type}", Severity.Debug);
+            _logger.LogDebug($"{this} sent packet: {packet.Type}");
 
             switch ((Packet.PacketTypeC2S) packet.TypeNum)
             {
@@ -181,9 +182,9 @@
                     var existingConnection = _server.ConnectedUsers.FirstOrDefault(item => item.Login == Login && item != this);
                     if (existingConnection != null)
                     {
-                        _logger.Write($"User relogging: {this} -> {existingConnection}");
+                        _logger.LogInformation($"User relogging: {this} -> {existingConnection}");
                         if (existingConnection.Authorized && existingConnection.Connected && !Address.Equals(existingConnection.Address))
-                            _logger.Write($"Possible account sharing: {this} and {existingConnection}", Severity.Warning);
+                            _logger.LogWarning($"Possible account sharing: {this} and {existingConnection}");
 
                         existingConnection.Inherit(this, _socket.Socket);
                         Authorized = false;
@@ -198,7 +199,7 @@
                     break;
                 case Packet.PacketTypeC2S.SwitchQueueMode:
                     IsBot = !IsBot;
-                    _logger.Write($"{this} is now a passive bot: {IsBot}");
+                    _logger.LogInformation($"{this} is now a passive bot: {IsBot}");
                     break;
                 case Packet.PacketTypeC2S.EnterQueue:
                     _server.HandleUserEnterQueue(this, Math.Max(packet.GetPayload<int>(), 1));
@@ -213,7 +214,7 @@
                     _server.HandleUserResync(this, packet.GetPayload<long>());
                     break;
                 default:
-                    _logger.Write("Authorized user sent invalid packet type: " + packet.TypeNum + " from: " + this, Severity.Warning);
+                    _logger.LogWarning($"Authorized user sent invalid packet type: {packet.TypeNum} from: {this}");
                     IllegalAction("Unknown packet type");
                     break;
             }

@@ -1,6 +1,6 @@
 ﻿/// <reference path="shared.ts" />
 /// <reference path="communication.ts" />
-/// <reference path="../typed/phazer/phazer.d.ts" />
+/// <reference path="../typed/phaser/phaser.d.ts" />
 /// <reference path="../typed/jquery/jquery.d.ts" />
 
 

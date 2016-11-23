@@ -4,6 +4,7 @@
     using System.Net.Sockets;
     using System.Text;
     using Core.Utility;
+    using Microsoft.Extensions.Logging;
 
     public class PacketParser
     {
@@ -32,7 +33,7 @@
                     return;
                 }
 
-                _logger.Write("Received empty/wrong message: " + socketAsyncEventArgs.SocketError, Severity.Debug); // anti flood
+                _logger.LogDebug("Received empty/wrong message: " + socketAsyncEventArgs.SocketError); // anti flood
                 OnReceivingFailed?.Invoke(socketAsyncEventArgs.SocketError);
                 return;
             }

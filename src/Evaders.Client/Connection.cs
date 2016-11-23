@@ -11,6 +11,7 @@
     using CommonNetworking.CommonPayloads;
     using Core.Game;
     using Core.Utility;
+    using Microsoft.Extensions.Logging;
     using Payloads;
 
     public class Connection : IQueuer, IGameProvider
@@ -113,9 +114,9 @@
                 _easySocket.GiveBack(args.Buffer);
             };
             parser.OnReceivedJson += OnReceived;
-            _logger.Write("Socket set up", Severity.Debug);
+            _logger.LogDebug("Socket set up");
             Send(Packet.PacketTypeC2S.Authorize, new Authorize(identifier, displayName));
-            _logger.Write("Authorization request sent", Severity.Trace);
+            _logger.LogTrace("Authorization request sent");
         }
 
         public void Update()
@@ -126,7 +127,7 @@
         private void OnReceived(string json)
         {
             var packet = JsonNet.Deserialize<PacketS2C>(json);
-            _logger.Write("Received packet: " + packet, Severity.Trace);
+            _logger.LogTrace($"Received packet: {packet}");
             switch (packet.Type)
             {
                 case Packet.PacketTypeS2C.AuthState:
@@ -147,7 +148,7 @@
                         var ownerOfEntity = game.GetOwnerOfEntity(gameAction.ControlledEntityIdentifier);
                         if (ownerOfEntity == null)
                         {
-                            _logger.Write("Corrupted game state - cannot find entity: " + gameAction.ControlledEntityIdentifier + " in game " + gameAction.GameIdentifier, Severity.Error);
+                            _logger.LogError($"Corrupted game state - cannot find entity: {gameAction.ControlledEntityIdentifier} in game {gameAction.GameIdentifier}");
                             Send(Packet.PacketTypeC2S.ForceResync, gameAction.GameIdentifier);
                         }
                         else
@@ -155,7 +156,7 @@
                     }
                     else
                     {
-                        _logger.Write("Action in unknown game: " + gameAction.GameIdentifier, Severity.Error);
+                        _logger.LogError($"Action in unknown game: {gameAction.GameIdentifier}");
                         Send(Packet.PacketTypeC2S.ForceResync, gameAction.GameIdentifier);
                     }
                 }
@@ -169,11 +170,11 @@
                         _games[illegalAction.GameIdentifier.Value].HandleServerIllegalAction(illegalAction.Message);
                     else if (illegalAction.GameIdentifier != null)
                     {
-                        _logger.Write("Server refused action in unknown game: " + illegalAction.GameIdentifier, Severity.Error);
+                        _logger.LogError($"Server refused action in unknown game: {illegalAction.GameIdentifier}");
                         Send(Packet.PacketTypeC2S.ForceResync, illegalAction.GameIdentifier);
                     }
                     else
-                        _logger.Write("Cannot handle server packet (Claims illegal action in game, but does not specify the game identifier)", Severity.Warning);
+                        _logger.LogWarning("Cannot handle server packet (Claims illegal action in game, but does not specify the game identifier)");
                 }
                     break;
                 case Packet.PacketTypeS2C.NextRound:
@@ -183,7 +184,7 @@
                         _games[gameIdentifier].DoNextTurn();
                     else
                     {
-                        _logger.Write("Server sent turn end in unknown game: " + gameIdentifier, Severity.Error);
+                        _logger.LogError($"Server sent turn end in unknown game: {gameIdentifier}");
                         Send(Packet.PacketTypeC2S.ForceResync, gameIdentifier);
                     }
                 }
@@ -221,7 +222,7 @@
         internal void Send(Packet.PacketTypeC2S type, object payloadData)
         {
             var packetC2S = new PacketC2S(type, payloadData);
-            _logger.Write($"Sending packet: {packetC2S}", Severity.Trace);
+            _logger.LogTrace($"Sending packet: {packetC2S}");
             var payload = Encoding.Unicode.GetBytes(JsonNet.Serialize(packetC2S));
             using (var memStream = new MemoryStream())
             {

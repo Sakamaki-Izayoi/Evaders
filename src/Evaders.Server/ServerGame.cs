@@ -8,6 +8,7 @@
     using Core.Game;
     using Core.Utility;
     using Extensions;
+    using Microsoft.Extensions.Logging;
     using Newtonsoft.Json;
     using Payloads;
 
@@ -36,7 +37,7 @@
 
             if (elapsed > Settings.MaxFrameTimeSec)
             {
-                _logger.Write($"Forcing advancement of game {GameIdentifier}", Severity.Trace);
+                _logger.LogTrace($"Forcing advancement of game {GameIdentifier}");
                 foreach (var user in Users.Where(usr => usr.Connected && !_turnEndUsers.Contains(usr)))
                 {
                     _turnEndUsers.Add(user);

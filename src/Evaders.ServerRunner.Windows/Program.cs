@@ -4,6 +4,8 @@
     using System.ServiceProcess;
     using System.Threading;
     using Core.Utility;
+    using Microsoft.Extensions.Logging;
+    using Microsoft.Extensions.Logging.Console;
     using Server;
 
     internal static class Program
@@ -23,7 +25,7 @@
             }
 
             var config = ServerConfiguration.Default;
-            var logger = new ConsoleLogger(Severity.Info);
+            var logger = new ConsoleLogger("console", (m, l) => l >= LogLevel.Information, true);
             var supervisor = new EmptySupervisor();
             var serv = new EvadersServer(supervisor, new Matchmaking(config.MaxTimeInQueueSec, logger, supervisor), logger, config);
 
