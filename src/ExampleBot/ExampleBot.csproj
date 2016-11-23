@@ -149,7 +149,6 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="ConnectionContext.cs" />
-    <Compile Include="ConsoleLogger.cs" />
     <Compile Include="Context.cs" />
     <Compile Include="IContextManager.cs" />
     <Compile Include="Program.cs" />
