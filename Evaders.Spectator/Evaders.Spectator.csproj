@@ -7,7 +7,7 @@
     <ProductVersion>8.0.30703</ProductVersion>
     <SchemaVersion>2.0</SchemaVersion>
     <ProjectGuid>{F5F2EA66-D8EF-429D-88A7-36E6F152C2F2}</ProjectGuid>
-    <OutputType>WinExe</OutputType>
+    <OutputType>Library</OutputType>
     <AppDesignerFolder>Properties</AppDesignerFolder>
     <RootNamespace>Evaders.Spectator</RootNamespace>
     <AssemblyName>Evaders.Spectator</AssemblyName>
@@ -38,20 +38,20 @@
   <PropertyGroup>
     <ApplicationIcon>Icon.ico</ApplicationIcon>
   </PropertyGroup>
+  <PropertyGroup>
+    <StartupObject />
+  </PropertyGroup>
   <ItemGroup>
-    <Compile Include="Root.cs" />
+    <Compile Include="Extensions.cs" />
+    <Compile Include="IScreenManager.cs" />
+    <Compile Include="TextureManager.cs" />
+    <Compile Include="Screen.cs" />
+    <Compile Include="ScreenGameRenderer.cs" />
+    <Compile Include="ScreenMainMenu.cs" />
+    <Compile Include="SpectatorWindow.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
   <ItemGroup>
-    <Reference Include="OpenTK">
-      <HintPath>$(MonoGameInstallDirectory)\MonoGame\v3.0\Assemblies\DesktopGL\OpenTK.dll</HintPath>
-    </Reference>
-    <Reference Include="NVorbis">
-      <HintPath>$(MonoGameInstallDirectory)\MonoGame\v3.0\Assemblies\DesktopGL\NVorbis.dll</HintPath>
-    </Reference>
-    <Reference Include="MonoGame.Framework">
-      <HintPath>$(MonoGameInstallDirectory)\MonoGame\v3.0\Assemblies\DesktopGL\MonoGame.Framework.dll</HintPath>
-    </Reference>
     <Reference Include="System" />
     <Reference Include="System.Xml" />
   </ItemGroup>
@@ -68,6 +68,10 @@
     <ProjectReference Include="..\Evaders.Client\Evaders.Client.csproj">
       <Project>{0e4b7d2e-6adf-4387-b41b-6f36c6736bb8}</Project>
       <Name>Evaders.Client</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\Evaders.Core\Evaders.Core.csproj">
+      <Project>{f45515b8-560a-47ae-ad4a-ff6196b6eee9}</Project>
+      <Name>Evaders.Core</Name>
     </ProjectReference>
   </ItemGroup>
   <ItemGroup>

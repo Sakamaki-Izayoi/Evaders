@@ -1,0 +1,231 @@
+﻿namespace Evaders.Server
+{
+    using System;
+    using System.Collections.Generic;
+    using System.IO;
+    using System.Linq;
+    using System.Net;
+    using System.Net.Sockets;
+    using System.Text;
+    using CommonNetworking;
+    using CommonNetworking.CommonPayloads;
+    using Core.Game;
+    using Core.Utility;
+    using Extensions;
+    using Newtonsoft.Json;
+
+    internal class User : IServerUser
+    {
+        public bool Connected => _socket.Connected;
+        public IPAddress Address => (_socket.Socket.RemoteEndPoint as IPEndPoint)?.Address ?? IPAddress.Any;
+
+        [JsonProperty]
+        public long Identifier { get; private set; }
+
+        public Guid Login { get; private set; }
+
+        [JsonProperty]
+        public string Username { get; private set; }
+
+        [JsonProperty]
+        public bool IsBot { get; private set; }
+
+        public bool Disposed => _socket.Stopped;
+        public bool Authorized { get; private set; }
+        public bool FullGameState { get; private set; } // Send full game state each turn or just differences
+        private readonly ILogger _logger;
+        private readonly IRulesProvider _rules;
+        private readonly IServer _server;
+
+        private PacketParser _packetParser;
+        private EasySocket _socket;
+        public string Version;
+
+        public User(Socket socket, ILogger logger, IServer server, IRulesProvider rules)
+        {
+            _logger = logger;
+            _server = server;
+            _rules = rules;
+            _packetParser = new PacketParser(logger, Encoding.Unicode);
+            _packetParser.OnReceivedJson += OnPacket;
+            SetupSocket(socket);
+        }
+
+        public void IllegalAction(string reason)
+        {
+            Send(Packet.PacketTypeS2C.IllegalAction, new IllegalAction(reason, false, null));
+        }
+
+        /// <summary>
+        ///     Replaces the socket with the socket of the given user. This should be used to let a reconnecting user continue
+        ///     where he left
+        /// </summary>
+        /// <param name="user"></param>
+        /// <param name="socket"></param>
+        public void Inherit(IServerUser user, Socket socket)
+        {
+            var userImpl = user as User;
+
+            if (userImpl == null)
+                throw new NotImplementedException(); // assuming there are no other implementations of IServerUser than User
+
+            _socket.Dispose(); // Dispose disconnected
+            userImpl._socket.StopJobs(); // Discontinue wrapper because the events will call the methods of the new (duplicate) user
+            SetupSocket(userImpl._socket.Socket); // Recreate wrapper
+            _packetParser = userImpl._packetParser;
+            Username = user.Username;
+            FullGameState = user.FullGameState;
+            Authorized = user.Authorized;
+        }
+
+        public void Send(Packet.PacketTypeS2C type, object payload)
+        {
+            Send(new PacketS2C(type, payload));
+        }
+
+        public void Dispose()
+        {
+            Authorized = false;
+            _socket.Dispose();
+        }
+
+        public void Update()
+        {
+            _socket.Work();
+        }
+
+        private void OnPacket(string json)
+        {
+            HandlePacket(JsonNet.Deserialize<PacketC2S>(json));
+        }
+
+        private void SetupSocket(Socket socket)
+        {
+            _socket = new EasySocket(socket);
+            _socket.StartJobs(EasySocket.SocketTasks.Receive);
+            _socket.OnSent += OnSent;
+            _socket.OnReceived += (sender, args) =>
+            {
+                _packetParser.Continue(args);
+                _socket.GiveBack(args.Buffer);
+            };
+        }
+
+        private void Send(Packet packetS2C)
+        {
+            if (!Connected || _socket.Stopped)
+            {
+                _server.Kick(this);
+                return;
+            }
+
+            var payload = Encoding.Unicode.GetBytes(JsonNet.Serialize(packetS2C));
+            using (var memStream = new MemoryStream())
+            {
+                var writer = new BinaryWriter(memStream);
+                writer.Write(payload.Length);
+                writer.Write(payload);
+                _socket.SendAsync(memStream.ToArray());
+            }
+        }
+
+        private void OnSent(object sender, SocketAsyncEventArgs socketAsyncEventArgs)
+        {
+            if (socketAsyncEventArgs.BytesTransferred != socketAsyncEventArgs.Count)
+            {
+                _logger.Write($"{this} disconnected");
+                _server.Kick(this);
+            }
+        }
+
+        private void HandlePacket(PacketC2S packet)
+        {
+            if (!Authorized && packet.Type != Packet.PacketTypeC2S.Authorize)
+            {
+                _logger.Write($"{this} tried to send unauthorized packets!", Severity.Debug);
+                IllegalAction("Please authorize first!");
+                return;
+            }
+            _logger.Write($"{this} sent packet: {packet.Type}", Severity.Debug);
+
+            switch ((Packet.PacketTypeC2S)packet.TypeNum)
+            {
+                case Packet.PacketTypeC2S.Authorize:
+                    if (Authorized)
+                    {
+                        IllegalAction("Already authorized");
+                        return;
+                    }
+                    var authorize = packet.GetPayload<Authorize>();
+                    Login = authorize.Identifier;
+                    Username = authorize.Name;
+                    FullGameState = authorize.FullGameState;
+
+                    if (Username.Length > _rules.MaxUsernameLength)
+                    {
+                        IllegalAction("Are you Daenerys Targaryen? No? Then you can't possibly have a name that long. (Exceeded name length limitation)");
+                        return;
+                    }
+
+                    if (Login == null || Login.ToByteArray().Distinct().Count() <= 1)
+                    {
+                        IllegalAction("Invalid login. The login is supposed to be a GUID of your choice (choose any, but keep that one!). It needs to be in a notation that can be parsed by this: https://msdn.microsoft.com/en-us/library/system.guid.parse(v=vs.110).aspx");
+                        return;
+                    }
+
+                    if (string.IsNullOrWhiteSpace(Username))
+                    {
+                        IllegalAction("Now, don't get me wrong, I really like your name. Reminds me of 'No Game No Life'. However, the spectator client will be really sad if he can't render anything, so please be a little more creative and come back with something not-empty!");
+                        return;
+                    }
+
+                    Identifier = _server.GenerateUniqueUserIdentifier();
+                    Authorized = true;
+
+                    var existingConnection = _server.ConnectedUsers.FirstOrDefault(item => item.Login == Login && item != this);
+                    if (existingConnection != null)
+                    {
+                        _logger.Write($"User relogging: {this} -> {existingConnection}");
+                        if (existingConnection.Authorized && existingConnection.Connected && !Address.Equals(existingConnection.Address))
+                            _logger.Write($"Possible account sharing: {this} and {existingConnection}", Severity.Warning);
+
+                        existingConnection.Inherit(this, _socket.Socket);
+                        Authorized = false;
+                        _server.Kick(this);
+                        _server.HandleUserReconnect(existingConnection);
+                        return;
+                    }
+                    Send(Packet.PacketTypeS2C.AuthState, new AuthState(true, _server.GetMotd()));
+                    break;
+                case Packet.PacketTypeC2S.GameAction:
+                    _server.HandleUserAction(this, packet.GetPayload<LiveGameAction>());
+                    break;
+                case Packet.PacketTypeC2S.SwitchQueueMode:
+                    IsBot = !IsBot;
+                    _logger.Write($"{this} is now a passive bot: {IsBot}");
+                    break;
+                case Packet.PacketTypeC2S.EnterQueue:
+                    _server.HandleUserEnterQueue(this, Math.Max(packet.GetPayload<int>(), 1));
+                    break;
+                case Packet.PacketTypeC2S.LeaveQueue:
+                    _server.HandleUserLeaveQueue(this, Math.Max(packet.GetPayload<int>(), 1));
+                    break;
+                case Packet.PacketTypeC2S.TurnEnd:
+                    _server.HandleUserEndTurn(this, packet.GetPayload<long>());
+                    break;
+                case Packet.PacketTypeC2S.ForceResync:
+                    _server.HandleUserResync(this, packet.GetPayload<long>());
+                    break;
+                default:
+                    _logger.Write("Authorized user sent invalid packet type: " + packet.TypeNum + " from: " + this, Severity.Warning);
+                    IllegalAction("Unknown packet type");
+                    break;
+            }
+        }
+
+        public override string ToString()
+        {
+            return $"{Username}@{Address} ({Login}/{Identifier})";
+        }
+    }
+}

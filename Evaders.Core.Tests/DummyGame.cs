@@ -3,7 +3,7 @@
     using System.Collections.Generic;
     using Game;
 
-    internal class DummyGame : Game<DummyUser>
+    internal class DummyGame : DefaultSandboxGame<DummyUser>
     {
         public DummyGame(IEnumerable<DummyUser> users, GameSettings settings) : base(users, settings)
         {
@@ -19,6 +19,16 @@
 
         protected override void OnGameEnd()
         {
+        }
+
+        public void AddGameAction(DummyUser from, GameAction action)
+        {
+            AddAction(from, action);
+        }
+
+        public void DoNextTurn()
+        {
+            NextTurn();
         }
 
         protected override void OnIllegalAction(DummyUser user, string warningMsg)

@@ -1,50 +1,53 @@
 ﻿namespace Evaders.Core.Game
 {
+    using System;
     using System.Collections.Generic;
     using System.Linq;
     using System.Runtime.Serialization;
     using Newtonsoft.Json;
     using Utility;
 
-    public abstract class Game<TUser> where TUser : IUser
+    public abstract class Game<TUser, TEntity> : GameBase where TUser : IUser where TEntity : EntityBase
     {
-        public double TimePerFrameSec => 1d/Settings.FramesPerSecond;
+        public override double TimePerFrameSec => 1d / Settings.FramesPerSecond;
         public bool GameEnded => Entities.All(entity => entity.PlayerIdentifier == Entities.FirstOrDefault()?.PlayerIdentifier);
+
+        [JsonProperty]
         public IEnumerable<TUser> Users => _users.Keys;
-        public IReadOnlyList<Entity<TUser>> ValidEntities => Entities;
-        public IReadOnlyList<Projectile<TUser>> ValidProjectiles => Projectiles;
-        public int Frame { get; private set; }
+
+        public override IReadOnlyList<EntityBase> ValidEntities => Entities;
+        public override IReadOnlyList<Projectile> ValidProjectiles => Projectiles;
         private readonly long _entityIdentifier;
 
-        private readonly List<Entity<TUser>> _toRemoveEntities = new List<Entity<TUser>>();
-        private readonly List<Projectile<TUser>> _toRemoveProjectiles = new List<Projectile<TUser>>();
+        private readonly List<TEntity> _toRemoveEntities = new List<TEntity>();
+        private readonly List<Projectile> _toRemoveProjectiles = new List<Projectile>();
         private readonly Dictionary<TUser, List<GameAction>> _users;
 
-        [JsonProperty] internal readonly List<Entity<TUser>> Entities = new List<Entity<TUser>>();
+        [JsonProperty]
+        protected readonly List<TEntity> Entities = new List<TEntity>();
 
-        [JsonProperty] internal readonly List<Projectile<TUser>> Projectiles = new List<Projectile<TUser>>();
+        [JsonProperty]
+        protected readonly List<Projectile> Projectiles = new List<Projectile>();
 
-        public readonly GameSettings Settings;
         private long _projectileIdentifier;
 
-        public Game(IEnumerable<TUser> users, GameSettings settings)
+        public Game(IEnumerable<TUser> users, GameSettings settings, IEntityFactory<TEntity> entityFactory) : base(settings)
         {
-            Settings = settings;
             _users = users.ToDictionary(item => item, item => new List<GameAction>());
 
             var unitUp = new Vector2(0, -1);
-            var rotateBy = 360f/_users.Count;
+            var rotateBy = 360f / _users.Count;
             foreach (var user in _users)
             {
-                Entities.Add(new Entity<TUser>(Settings.DefaultCharacterData, unitUp*(Settings.ArenaRadius - Settings.DefaultCharacterData.HitboxSize), user.Key.Identifier, _entityIdentifier++, this));
+                Entities.Add(entityFactory.Create(Settings.DefaultCharacterData, unitUp * (Settings.ArenaRadius - Settings.DefaultCharacterData.HitboxSize), user.Key.Identifier, _entityIdentifier++, this)); // new Entity<TUser>(Settings.DefaultCharacterData, unitUp * (Settings.ArenaRadius - Settings.DefaultCharacterData.HitboxSize), user.Key.Identifier, _entityIdentifier++, this));
                 unitUp = unitUp.RotatedDegrees(rotateBy);
             }
         }
 
-        public void NextTurn()
+        protected void NextTurn()
         {
             foreach (var user in _users)
-                foreach (var gameAction in user.Value)
+                foreach (var gameAction in user.Value.OrderByDescending(item => item.Type))
                 {
                     var controlledEntity = Entities.FirstOrDefault(item => item.EntityIdentifier == gameAction.ControlledEntityIdentifier);
                     if (controlledEntity == null)
@@ -68,7 +71,7 @@
                             result = controlledEntity.ShootInternal(gameAction.Position);
                             break;
                         default:
-                            OnIllegalAction(user.Key, "Unknown Action: " + (int) gameAction.Type);
+                            OnIllegalAction(user.Key, "Unknown Action: " + (int)gameAction.Type);
                             continue;
                     }
                     if (!result)
@@ -93,7 +96,7 @@
             foreach (var keyValuePair in _users)
                 keyValuePair.Value.Clear();
 
-            Frame++;
+            Turn++;
 
             if (GameEnded)
                 OnGameEnd();
@@ -101,22 +104,53 @@
                 OnTurnEnded();
         }
 
-        public void AddAction(TUser from, GameAction action)
+        /// <summary>
+        ///     Just adds the action, but does not call any checks like BeforeHandleAction
+        /// </summary>
+        /// <param name="from"></param>
+        /// <param name="action"></param>
+        protected void AddActionInternal(TUser from, GameAction action)
+        {
+            _users[from].Add(action);
+        }
+
+        /// <summary>
+        ///     Checks with BeforeHandleAction if the action is legit, then passes the call to AddActionInternal and returns
+        ///     accordingly
+        /// </summary>
+        /// <param name="from"></param>
+        /// <param name="action"></param>
+        /// <returns></returns>
+        protected internal virtual bool AddAction(TUser from, GameAction action)
         {
             if (!BeforeHandleAction(@from, action))
-                return;
+                return false;
 
-            _users[from].Add(action);
+            AddActionInternal(from, action);
+            return true;
+        }
+
+        protected internal override bool AddAction(long userIdentifier, GameAction action)
+        {
+            var user = GetUser(userIdentifier);
+            if (user == null)
+                throw new ArgumentException("User does not exist: " + userIdentifier, nameof(userIdentifier));
+            return AddAction(user, action);
+        }
+
+        protected internal override void SpawnProjectile(Vector2 direction, EntityBase entity)
+        {
+            Projectiles.Add(new Projectile(direction.Unit, entity, this, _projectileIdentifier++, Turn + (int)Math.Ceiling(Settings.ProjectileLifeTimeSec / TimePerFrameSec)));
         }
 
         internal TUser GetUser(long userIdentifier) => _users.Keys.FirstOrDefault(item => item.Identifier == userIdentifier);
 
-        internal void RemoveAfterFrame(Entity<TUser> entity)
+        protected internal override void HandleDeath(EntityBase entity)
         {
-            _toRemoveEntities.Add(entity);
+            _toRemoveEntities.Add((TEntity)entity);
         }
 
-        internal void RemoveAfterFrame(Projectile<TUser> projectile)
+        protected internal override void HandleDeath(Projectile projectile)
         {
             _toRemoveProjectiles.Add(projectile);
         }
@@ -141,7 +175,5 @@
         protected abstract void OnIllegalAction(TUser user, string warningMsg);
 
         protected abstract bool BeforeHandleAction(TUser @from, GameAction action);
-
-        internal long GenerateProjectileIdentifier() => _projectileIdentifier++;
     }
 }

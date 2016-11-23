@@ -39,14 +39,38 @@
     <None Include="project.json" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="EvadersServer.cs" />
+    <Compile Include="Extensions\GameExtensions.cs" />
+    <Compile Include="Extensions\UserExtensions.cs" />
+    <Compile Include="Extensions\UserStatisticsExtensions.cs" />
+    <Compile Include="IMatchmaking.cs" />
+    <Compile Include="IRulesProvider.cs" />
+    <Compile Include="IServer.cs" />
+    <Compile Include="IServerSupervisor.cs" />
+    <Compile Include="IServerUser.cs" />
+    <Compile Include="Extensions\LinqExtensions.cs" />
+    <Compile Include="IWinStatistics.cs" />
+    <Compile Include="JsonNet.cs" />
+    <Compile Include="Matchmaking.cs" />
+    <Compile Include="Payloads\GameEnd.cs" />
+    <Compile Include="Payloads\GameState.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="AsyncSaving.cs" />
+    <Compile Include="ServerConfiguration.cs" />
+    <Compile Include="ServerGame.cs" />
+    <Compile Include="User.cs" />
   </ItemGroup>
   <ItemGroup>
+    <ProjectReference Include="..\Evaders.CommonNetworking\Evaders.CommonNetworking.csproj">
+      <Project>{4b8b0fc1-6bb3-46e6-87b3-7da84deb217d}</Project>
+      <Name>Evaders.CommonNetworking</Name>
+    </ProjectReference>
     <ProjectReference Include="..\Evaders.Core\Evaders.Core.csproj">
       <Project>{f45515b8-560a-47ae-ad4a-ff6196b6eee9}</Project>
       <Name>Evaders.Core</Name>
     </ProjectReference>
   </ItemGroup>
+  <ItemGroup />
   <Import Project="$(MSBuildExtensionsPath32)\Microsoft\Portable\$(TargetFrameworkVersion)\Microsoft.Portable.CSharp.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
        Other similar extension points exist, see Microsoft.Common.targets.

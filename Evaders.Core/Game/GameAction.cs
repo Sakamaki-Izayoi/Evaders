@@ -1,13 +1,17 @@
 ﻿namespace Evaders.Core.Game
 {
+    using Newtonsoft.Json;
     using Utility;
 
     public class GameAction
     {
-        public readonly long ControlledEntityIdentifier;
-        public readonly Vector2 Position;
-        public readonly GameActionType Type;
+        [JsonProperty] public readonly long ControlledEntityIdentifier;
 
+        [JsonProperty] public readonly Vector2 Position;
+
+        [JsonProperty] public readonly GameActionType Type;
+
+        [JsonConstructor]
         public GameAction(GameActionType type, Vector2 position, long controlledEntityIdentifier)
         {
             Type = type;

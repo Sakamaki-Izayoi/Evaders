@@ -1,6 +1,10 @@
 ﻿namespace Evaders.ServerRunner.Windows
 {
+    using System;
     using System.ServiceProcess;
+    using System.Threading;
+    using Core.Utility;
+    using Server;
 
     internal static class Program
     {
@@ -9,11 +13,26 @@
         /// </summary>
         private static void Main()
         {
-            ServiceBase[] ServicesToRun;
-            ServicesToRun = new ServiceBase[]
+            if (!Environment.UserInteractive)
             {
-            };
-            ServiceBase.Run(ServicesToRun);
+                throw new NotImplementedException();
+                ServiceBase[] ServicesToRun;
+                ServicesToRun = new ServiceBase[] { };
+                ServiceBase.Run(ServicesToRun);
+                return;
+            }
+
+            var config = ServerConfiguration.Default;
+            var logger = new ConsoleLogger(Severity.Info);
+            var superviser = new EmptySuperviser();
+            var serv = new EvadersServer(superviser, new Matchmaking(config.MaxTimeInQueueSec, logger, superviser), logger, config);
+
+            var wait = new SpinWait();
+            while (true)
+            {
+                serv.Update();
+                wait.SpinOnce();
+            }
         }
     }
 }
