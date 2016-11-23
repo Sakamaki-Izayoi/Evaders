@@ -6,6 +6,7 @@
     "jquery": "2.2.0",
     "jquery-validation": "1.14.0",
     "jquery-validation-unobtrusive": "3.2.6",
-    "bootswatch": "3.3.6"
+    "bootswatch": "3.3.6",
+    "phaser": "https://raw.githubusercontent.com/photonstorm/phaser/v2.6.2/build/phaser.min.js"
   }
 }
