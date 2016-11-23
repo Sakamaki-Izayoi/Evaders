@@ -104,7 +104,7 @@
 
             if (GamePad.GetState(PlayerIndex.One).Buttons.Back == ButtonState.Pressed || Keyboard.GetState().IsKeyDown(Keys.Escape))
                 if (_screens.Count <= 1)
-                    Exit();
+                    Environment.Exit(0);
                 else
                     _screens.Pop();
 
