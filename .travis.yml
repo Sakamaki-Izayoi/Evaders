@@ -1,0 +1,15 @@
+language: csharp
+solution: Evaders.sln
+before_install:
+  - wget http://www.monogame.net/releases/v3.4/MonoGame.Linux.zip
+  - unzip MonoGame.Linux.zip
+  - find * -type f -exec chmod 777 {} \; # lazy just make all executable
+  - mkdir -p .nuget
+  - wget -O .nuget/nuget.exe https://dist.nuget.org/win-x86-commandline/latest/nuget.exe
+  - mono .nuget/nuget.exe # Output NuGet's version number
+install:
+  - sudo apt-get install -qq monodevelop libopenal-dev referenceassemblies-pcl ttf-mscorefonts-installer gtk-sharp2; # install needed packages for the monogame sdk
+  - sudo ./generate.sh && yes Y|sudo ./monogame-linux.run; # install monogame sdk
+  - mono .nuget/nugetexe restore Evaders.sln -Verbosity detailed
+script:
+  - (cd src/Evaders.Spectator.DirectX/Content && mono /opt/monogame-pipeline/MGCB.exe /rebuild /@:"Content.mgcb" /outputDir:"../bin/Release/Content") 
