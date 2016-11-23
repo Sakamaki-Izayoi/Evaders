@@ -126,7 +126,7 @@
 
         string IServer.GetMotd()
         {
-            return _supervisor.GetMotd();
+            return _config.Motd;
         }
 
         void IServer.HandleGameEnded(ServerGame serverGame)
