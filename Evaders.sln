@@ -20,7 +20,7 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ExampleBot", "src\ExampleBo
 		{EDAFEB49-CCE8-41F6-8BC8-E98622FD0C86} = {EDAFEB49-CCE8-41F6-8BC8-E98622FD0C86}
 	EndProjectSection
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Evaders.Spectator.DirectX", "src\Evaders.Spectator.DirectX\Evaders.Spectator.DirectX.csproj", "{A4CAB622-6271-42E0-9983-0BC362973A0E}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Evaders.Spectator.OpenGL", "src\Evaders.Spectator.OpenGL\Evaders.Spectator.OpenGL.csproj", "{A4CAB622-6271-42E0-9983-0BC362973A0E}"
 EndProject
 Project("{8BB2217D-0F2D-49D1-97BC-3654ED321F3B}") = "Evaders", "src\Evaders\Evaders.xproj", "{DF0969C0-B409-41F8-9A5E-E993062E6AC0}"
 EndProject
