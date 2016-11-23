@@ -4,6 +4,8 @@
     using System.Diagnostics;
     using System.Net;
     using Evaders.Client;
+    using Microsoft.Extensions.Logging;
+    using Microsoft.Extensions.Logging.Console;
 
     internal class ConnectionContext : Context
     {
@@ -11,7 +13,7 @@
 
         public ConnectionContext(IPAddress address, ushort port, IContextManager manager) : base(manager)
         {
-            Connection = new Connection(Guid.NewGuid(), "nin0", address, port, new ConsoleLogger());
+            Connection = new Connection(Guid.NewGuid(), "nin0", address, port, new ConsoleLogger("console", (m, lvl) => lvl >= LogLevel.Information, true));
             Connection.OnLoggedIn += (sender, args) =>
             {
                 Console.WriteLine("SERVER: " + args.Message);
