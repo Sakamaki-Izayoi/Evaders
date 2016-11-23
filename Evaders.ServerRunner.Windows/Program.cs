@@ -24,8 +24,8 @@
 
             var config = ServerConfiguration.Default;
             var logger = new ConsoleLogger(Severity.Info);
-            var superviser = new EmptySuperviser();
-            var serv = new EvadersServer(superviser, new Matchmaking(config.MaxTimeInQueueSec, logger, superviser), logger, config);
+            var supervisor = new EmptySupervisor();
+            var serv = new EvadersServer(supervisor, new Matchmaking(config.MaxTimeInQueueSec, logger, supervisor), logger, config);
 
             var wait = new SpinWait();
             while (true)

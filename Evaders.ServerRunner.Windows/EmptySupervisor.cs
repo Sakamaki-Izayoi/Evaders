@@ -6,7 +6,7 @@
     using Core.Game;
     using Server;
 
-    internal class EmptySuperviser : IServerSupervisor
+    internal class EmptySupervisor : IServerSupervisor
     {
         private class WinStats : IWinStatistics
         {

@@ -70,7 +70,7 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="ConsoleLogger.cs" />
-    <Compile Include="EmptySuperviser.cs" />
+    <Compile Include="EmptySupervisor.cs" />
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
