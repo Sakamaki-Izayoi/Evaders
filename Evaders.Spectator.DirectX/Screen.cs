@@ -5,9 +5,9 @@
 
     public abstract class Screen
     {
-        private readonly IScreenManager _manager;
         public virtual SeeThrough SeeThroughType => SeeThrough.None;
         public virtual Color BackgroundColor => Color.Black;
+        private readonly IScreenManager _manager;
 
         protected Screen(IScreenManager manager)
         {
@@ -17,7 +17,9 @@
         public abstract void Draw(SpriteBatch spritebatch, GraphicsDeviceManager graphicsDeviceManager);
         public abstract void UpdateActive(double deltaT, GraphicsDeviceManager graphicsDeviceManager);
 
-        public virtual void Resize(GraphicsDeviceManager graphicsDeviceManager) { }
+        public virtual void Resize(GraphicsDeviceManager graphicsDeviceManager)
+        {
+        }
 
         protected void Close()
         {

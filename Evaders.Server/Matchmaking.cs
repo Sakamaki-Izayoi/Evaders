@@ -26,8 +26,8 @@
         private readonly List<IServerUser> _inQueue = new List<IServerUser>();
         private readonly Dictionary<IServerUser, double> _joinedQueueTime = new Dictionary<IServerUser, double>();
         private readonly ILogger _logger;
-        private readonly IServerSupervisor _supervisor;
         private readonly float _maxTimeInQueue;
+        private readonly IServerSupervisor _supervisor;
         private readonly Stopwatch _time = Stopwatch.StartNew();
         //private Guid _lastQueuer;
         private double _lastQueuerTime;
@@ -100,9 +100,7 @@
                 var bestBotBot = _inQueue.FirstOrDefault(bot => bot.Login == bestMatch);
 
                 if (bestBotBot == null)
-                {
                     _logger.Write($"{GetType().Name}: {_supervisor.GetType()} gave me an invalid GUID as best choice!", Severity.Error);
-                }
                 else
                 {
                     _logger.Write($"Found a match (Queue very empty for a longer time, matching with bot: {bestBotBot})", Severity.Debug);

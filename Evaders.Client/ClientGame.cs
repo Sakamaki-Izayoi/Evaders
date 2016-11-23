@@ -92,7 +92,8 @@
 
         internal void AddActionWithoutNetworking(ClientUser @from, GameAction action)
         {
-            if (@from == null) throw new ArgumentException("User cannot be null", nameof(from));
+            if (@from == null)
+                throw new ArgumentException("User cannot be null", nameof(from));
             AddActionInternal(from, action);
         }
 

@@ -9,7 +9,7 @@
 
     public abstract class Game<TUser, TEntity> : GameBase where TUser : IUser where TEntity : EntityBase
     {
-        public override double TimePerFrameSec => 1d / Settings.FramesPerSecond;
+        public override double TimePerFrameSec => 1d/Settings.FramesPerSecond;
         public bool GameEnded => Entities.All(entity => entity.PlayerIdentifier == Entities.FirstOrDefault()?.PlayerIdentifier);
 
         [JsonProperty]
@@ -23,11 +23,9 @@
         private readonly List<Projectile> _toRemoveProjectiles = new List<Projectile>();
         private readonly Dictionary<TUser, List<GameAction>> _users;
 
-        [JsonProperty]
-        protected readonly List<TEntity> Entities = new List<TEntity>();
+        [JsonProperty] protected readonly List<TEntity> Entities = new List<TEntity>();
 
-        [JsonProperty]
-        protected readonly List<Projectile> Projectiles = new List<Projectile>();
+        [JsonProperty] protected readonly List<Projectile> Projectiles = new List<Projectile>();
 
         private long _projectileIdentifier;
 
@@ -36,10 +34,10 @@
             _users = users.ToDictionary(item => item, item => new List<GameAction>());
 
             var unitUp = new Vector2(0, -1);
-            var rotateBy = 360f / _users.Count;
+            var rotateBy = 360f/_users.Count;
             foreach (var user in _users)
             {
-                Entities.Add(entityFactory.Create(Settings.DefaultCharacterData, unitUp * (Settings.ArenaRadius - Settings.DefaultCharacterData.HitboxSize), user.Key.Identifier, _entityIdentifier++, this)); // new Entity<TUser>(Settings.DefaultCharacterData, unitUp * (Settings.ArenaRadius - Settings.DefaultCharacterData.HitboxSize), user.Key.Identifier, _entityIdentifier++, this));
+                Entities.Add(entityFactory.Create(Settings.DefaultCharacterData, unitUp*(Settings.ArenaRadius - Settings.DefaultCharacterData.HitboxSize), user.Key.Identifier, _entityIdentifier++, this)); // new Entity<TUser>(Settings.DefaultCharacterData, unitUp * (Settings.ArenaRadius - Settings.DefaultCharacterData.HitboxSize), user.Key.Identifier, _entityIdentifier++, this));
                 unitUp = unitUp.RotatedDegrees(rotateBy);
             }
         }
@@ -71,7 +69,7 @@
                             result = controlledEntity.ShootInternal(gameAction.Position);
                             break;
                         default:
-                            OnIllegalAction(user.Key, "Unknown Action: " + (int)gameAction.Type);
+                            OnIllegalAction(user.Key, "Unknown Action: " + (int) gameAction.Type);
                             continue;
                     }
                     if (!result)
@@ -140,14 +138,14 @@
 
         protected internal override void SpawnProjectile(Vector2 direction, EntityBase entity)
         {
-            Projectiles.Add(new Projectile(direction.Unit, entity, this, _projectileIdentifier++, Turn + (int)Math.Ceiling(Settings.ProjectileLifeTimeSec / TimePerFrameSec)));
+            Projectiles.Add(new Projectile(direction.Unit, entity, this, _projectileIdentifier++, Turn + (int) Math.Ceiling(Settings.ProjectileLifeTimeSec/TimePerFrameSec)));
         }
 
         internal TUser GetUser(long userIdentifier) => _users.Keys.FirstOrDefault(item => item.Identifier == userIdentifier);
 
         protected internal override void HandleDeath(EntityBase entity)
         {
-            _toRemoveEntities.Add((TEntity)entity);
+            _toRemoveEntities.Add((TEntity) entity);
         }
 
         protected internal override void HandleDeath(Projectile projectile)

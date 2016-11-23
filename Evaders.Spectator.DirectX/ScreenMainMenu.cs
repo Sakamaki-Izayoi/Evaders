@@ -1,15 +1,10 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-
-namespace Evaders.Spectator
+﻿namespace Evaders.Spectator
 {
+    using System;
     using Microsoft.Xna.Framework;
     using Microsoft.Xna.Framework.Graphics;
 
-    class ScreenMainMenu : Screen
+    internal class ScreenMainMenu : Screen
     {
         public ScreenMainMenu(IScreenManager manager) : base(manager)
         {

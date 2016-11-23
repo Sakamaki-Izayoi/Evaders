@@ -44,10 +44,10 @@
                 if (_waitingMsgLength == null)
                 {
                     _waitingMsgLength = BitConverter.ToUInt32(socketAsyncEventArgs.Buffer, currentOffset);
-                    currentOffset += sizeof(uint);
+                    currentOffset += sizeof (uint);
                 }
 
-                var count = (int)Math.Min(socketAsyncEventArgs.BytesTransferred - (currentOffset - socketAsyncEventArgs.Offset), _waitingMsgLength.Value - _builderByteLength);
+                var count = (int) Math.Min(socketAsyncEventArgs.BytesTransferred - (currentOffset - socketAsyncEventArgs.Offset), _waitingMsgLength.Value - _builderByteLength);
                 var str = _jsonEncoding.GetString(socketAsyncEventArgs.Buffer, currentOffset, count);
                 _jsonBuilder.Append(str);
 

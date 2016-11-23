@@ -6,7 +6,7 @@
 
     public class Packet
     {
-        [JsonConverter(typeof(StringEnumConverter))]
+        [JsonConverter(typeof (StringEnumConverter))]
         public enum PacketTypeC2S
         {
             Authorize,
@@ -18,7 +18,7 @@
             SwitchQueueMode
         }
 
-        [JsonConverter(typeof(StringEnumConverter))]
+        [JsonConverter(typeof (StringEnumConverter))]
         public enum PacketTypeS2C
         {
             AuthState,
@@ -30,8 +30,7 @@
             QueueState
         }
 
-        [JsonProperty]
-        public object Payload;
+        [JsonProperty] public object Payload;
 
         public int TypeNum;
 
@@ -40,7 +39,7 @@
             if (Payload == null)
                 return default(T);
             if (Payload is T)
-                return (T)Payload;
+                return (T) Payload;
             return JsonNet.Deserialize<T>(Payload.ToString());
         }
     }

@@ -2,7 +2,6 @@
 {
     using System;
     using System.Collections.Generic;
-    using System.Linq;
     using System.Reflection;
     using Microsoft.Xna.Framework;
     using Microsoft.Xna.Framework.Graphics;
@@ -31,7 +30,9 @@
 
         public void Remove(Screen screen)
         {
-            while (_screens.Count > 1 && _screens.Pop() != screen) { }
+            while (_screens.Count > 1 && _screens.Pop() != screen)
+            {
+            }
         }
 
         [STAThread]
@@ -72,9 +73,7 @@
             Window.ClientSizeChanged += (sender, args) =>
             {
                 foreach (var screen in _screens)
-                {
                     screen.Resize(_graphics);
-                }
             };
             IsMouseVisible = true;
             TextureManager.LoadContent(Content);
@@ -104,14 +103,10 @@
             }
 
             if (GamePad.GetState(PlayerIndex.One).Buttons.Back == ButtonState.Pressed || Keyboard.GetState().IsKeyDown(Keys.Escape))
-            {
                 if (_screens.Count <= 1)
                     Exit();
                 else
-                {
                     _screens.Pop();
-                }
-            }
 
 
             UpdateTopScreenRecursive(gameTime.ElapsedGameTime.TotalSeconds);
@@ -152,15 +147,13 @@
             if (screen.SeeThroughType != SeeThrough.None)
                 DrawTopScreenRecursive();
             else
-            {
                 GraphicsDevice.Clear(screen.BackgroundColor);
-            }
 
             if (screen.SeeThroughType == SeeThrough.Partial)
             {
                 var pixel = TextureManager.Get(Texture.Pixel);
                 _spriteBatch.Begin(blendState: BlendState.Additive);
-                _spriteBatch.Draw(pixel, destinationRectangle: new Rectangle(0, 0, _graphics.PreferredBackBufferWidth, _graphics.PreferredBackBufferHeight), color: screen.BackgroundColor);
+                _spriteBatch.Draw(pixel, new Rectangle(0, 0, _graphics.PreferredBackBufferWidth, _graphics.PreferredBackBufferHeight), screen.BackgroundColor);
                 _spriteBatch.End();
             }
 

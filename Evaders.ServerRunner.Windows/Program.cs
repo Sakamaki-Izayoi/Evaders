@@ -17,7 +17,7 @@
             {
                 throw new NotImplementedException();
                 ServiceBase[] ServicesToRun;
-                ServicesToRun = new ServiceBase[] { };
+                ServicesToRun = new ServiceBase[] {};
                 ServiceBase.Run(ServicesToRun);
                 return;
             }

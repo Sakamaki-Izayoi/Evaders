@@ -1,7 +1,6 @@
 ﻿namespace Evaders.Server
 {
     using System;
-    using System.Collections.Generic;
     using System.IO;
     using System.Linq;
     using System.Net;
@@ -9,9 +8,7 @@
     using System.Text;
     using CommonNetworking;
     using CommonNetworking.CommonPayloads;
-    using Core.Game;
     using Core.Utility;
-    using Extensions;
     using Newtonsoft.Json;
 
     internal class User : IServerUser
@@ -39,7 +36,6 @@
 
         private PacketParser _packetParser;
         private EasySocket _socket;
-        public string Version;
 
         public User(Socket socket, ILogger logger, IServer server, IRulesProvider rules)
         {
@@ -148,7 +144,7 @@
             }
             _logger.Write($"{this} sent packet: {packet.Type}", Severity.Debug);
 
-            switch ((Packet.PacketTypeC2S)packet.TypeNum)
+            switch ((Packet.PacketTypeC2S) packet.TypeNum)
             {
                 case Packet.PacketTypeC2S.Authorize:
                     if (Authorized)

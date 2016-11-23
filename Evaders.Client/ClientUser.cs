@@ -7,8 +7,10 @@
     {
         [JsonProperty]
         public bool Connected { get; }
+
         [JsonProperty]
         public long Identifier { get; }
+
         [JsonProperty]
         public string Username { get; }
 

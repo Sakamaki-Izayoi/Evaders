@@ -1,6 +1,5 @@
 ﻿namespace Evaders.Server
 {
-    using System;
     using System.Collections.Generic;
     using System.Diagnostics;
     using System.Linq;
@@ -15,12 +14,12 @@
     internal class ServerGame : DefaultSandboxGame<IServerUser>
     {
         private readonly ILogger _logger;
+        private readonly IServer _server;
         private readonly Stopwatch _time = Stopwatch.StartNew();
         private readonly HashSet<IServerUser> _turnEndUsers = new HashSet<IServerUser>();
-        private readonly IServer _server;
 
-        [JsonProperty]
-        public readonly long GameIdentifier;
+        [JsonProperty] public readonly long GameIdentifier;
+
         private double _lastFrameSec;
 
         public ServerGame(IServer server, IEnumerable<IServerUser> users, GameSettings settings, long gameIdentifier, ILogger logger) : base(users, settings)

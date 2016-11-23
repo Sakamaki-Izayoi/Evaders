@@ -1,30 +1,25 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-
-namespace Evaders.Spectator
+﻿namespace Evaders.Spectator
 {
+    using System.Collections.Generic;
+    using System.Linq;
     using Client;
-    using Core.Game;
     using Microsoft.Xna.Framework;
     using Microsoft.Xna.Framework.Graphics;
     using Microsoft.Xna.Framework.Input;
 
     public class ScreenGameRenderer : Screen
     {
-        private readonly IGameProvider _games;
-        private Vector2 _cameraPosition = Vector2.Zero;
-        private float _zoom = 0.2f;
+        public override Color BackgroundColor => new Color(60, 0, 0);
         private const float MaxZoom = 2f, MinZoom = 0.2f;
-        private MouseState _lastMouseState;
-        private static readonly Color[] PlayerColorArray = { Color.DarkRed, Color.CornflowerBlue, Color.Goldenrod, Color.White, Color.Purple, Color.Chocolate, Color.OrangeRed, Color.Honeydew };
+        private static readonly Color[] PlayerColorArray = {Color.DarkRed, Color.CornflowerBlue, Color.Goldenrod, Color.White, Color.Purple, Color.Chocolate, Color.OrangeRed, Color.Honeydew};
+        private readonly IGameProvider _games;
         private readonly Dictionary<long, int> _playerColorMapper = new Dictionary<long, int>();
+        private Vector2 _cameraPosition = Vector2.Zero;
+        private bool _firstUpdate;
         private long _gameViewIdentifier;
         private KeyboardState _lastKeyboardState;
-        private bool _firstUpdate;
-        public override Color BackgroundColor => new Color(60, 0, 0);
+        private MouseState _lastMouseState;
+        private float _zoom = 0.2f;
 
         public ScreenGameRenderer(IScreenManager manager, IGameProvider games) : base(manager)
         {
@@ -37,12 +32,10 @@ namespace Evaders.Spectator
                 return;
 
             if (!_games.RunningGames.ContainsKey(_gameViewIdentifier))
-            {
                 _gameViewIdentifier = _games.RunningGames.First().Key;
-            }
             var game = _games.RunningGames[_gameViewIdentifier];
 
-            var viewMatrix = Matrix.CreateTranslation(_cameraPosition.X, _cameraPosition.Y, 0f) * Matrix.CreateScale(_zoom, _zoom, 1f) * Matrix.CreateTranslation(graphicsDeviceManager.PreferredBackBufferWidth / 2f, graphicsDeviceManager.PreferredBackBufferHeight / 2f, 0f);
+            var viewMatrix = Matrix.CreateTranslation(_cameraPosition.X, _cameraPosition.Y, 0f)*Matrix.CreateScale(_zoom, _zoom, 1f)*Matrix.CreateTranslation(graphicsDeviceManager.PreferredBackBufferWidth/2f, graphicsDeviceManager.PreferredBackBufferHeight/2f, 0f);
 
 
             spritebatch.Begin(transformMatrix: viewMatrix, blendState: BlendState.AlphaBlend, samplerState: SamplerState.LinearClamp);
@@ -57,7 +50,7 @@ namespace Evaders.Spectator
                 const float outlineFactor = 0.8f;
 
                 DrawCircle(spritebatch, validEntity.Position, validEntity.HitboxSize, outlineColor);
-                DrawCircle(spritebatch, validEntity.Position, validEntity.HitboxSize * outlineFactor, entityColor);
+                DrawCircle(spritebatch, validEntity.Position, validEntity.HitboxSize*outlineFactor, entityColor);
             }
 
             foreach (var projectile in game.ValidProjectiles)
@@ -75,7 +68,7 @@ namespace Evaders.Spectator
 
         private void DrawCircle(SpriteBatch spriteBatch, Core.Utility.Vector2 position, float radius, Color color)
         {
-            spriteBatch.Draw(TextureManager.Get(Texture.Circle), new Rectangle((int)(position.X - radius), (int)(position.Y - radius), (int)(radius * 2), (int)(radius * 2)), color);
+            spriteBatch.Draw(TextureManager.Get(Texture.Circle), new Rectangle((int) (position.X - radius), (int) (position.Y - radius), (int) (radius*2), (int) (radius*2)), color);
         }
 
         private void DrawCircle(SpriteBatch spriteBatch, Vector2 position, float radius, Color color)
@@ -97,21 +90,21 @@ namespace Evaders.Spectator
             var keyboardState = Keyboard.GetState();
             if (mouseState.ScrollWheelValue != _lastMouseState.ScrollWheelValue)
             {
-                var scale = (mouseState.ScrollWheelValue - _lastMouseState.ScrollWheelValue < 0 ? 0.95f : 1.05f);
-                _zoom = MathHelper.Clamp(_zoom * scale, MinZoom, MaxZoom);
+                var scale = mouseState.ScrollWheelValue - _lastMouseState.ScrollWheelValue < 0 ? 0.95f : 1.05f;
+                _zoom = MathHelper.Clamp(_zoom*scale, MinZoom, MaxZoom);
             }
 
             if (_lastMouseState.LeftButton == ButtonState.Pressed && mouseState.LeftButton == ButtonState.Pressed)
             {
-                var zoomFac = 1f / _zoom;
-                _cameraPosition += new Vector2((mouseState.X - _lastMouseState.X) * zoomFac, (mouseState.Y - _lastMouseState.Y) * zoomFac);
+                var zoomFac = 1f/_zoom;
+                _cameraPosition += new Vector2((mouseState.X - _lastMouseState.X)*zoomFac, (mouseState.Y - _lastMouseState.Y)*zoomFac);
             }
 
             if (keyboardState.IsKeyUp(Keys.Space) && _lastKeyboardState.IsKeyDown(Keys.Space))
             {
                 var index = _games.RunningGames.Keys.ToList().IndexOf(_gameViewIdentifier);
                 if (index != -1)
-                    _gameViewIdentifier = _games.RunningGames.Keys.ToArray()[++index % _games.RunningGames.Count];
+                    _gameViewIdentifier = _games.RunningGames.Keys.ToArray()[++index%_games.RunningGames.Count];
             }
 
             _lastKeyboardState = keyboardState;

@@ -9,44 +9,35 @@
         [JsonProperty]
         public Vector2 Position { get; internal set; }
 
+        public Vector2 DespawnPosition => Position + Direction*ProjectileSpeedSec*Game.TimePerFrameSec*(LifeEndTurn - Game.Turn);
+        public Vector2 PositionNextTurn => Position + Direction*ProjectileSpeedSec*Game.TimePerFrameSec;
+        public double MovingDistancePerTurn => ProjectileSpeedSec*Game.TimePerFrameSec;
+
         public readonly int Damage;
 
-        [JsonProperty]
-        public readonly Vector2 Direction;
+        [JsonProperty] public readonly Vector2 Direction;
 
-        [JsonProperty]
-        public readonly long EntityIdentifier;
+        [JsonProperty] public readonly long EntityIdentifier;
 
-        [JsonProperty]
-        public readonly int HitboxSize;
+        [JsonProperty] public readonly int HitboxSize;
 
-        [JsonProperty]
-        public readonly int LifeEndTurn;
+        [JsonProperty] public readonly int LifeEndTurn;
 
-        [JsonProperty]
-        public readonly long PlayerIdentifier;
+        [JsonProperty] public readonly long PlayerIdentifier;
 
-        [JsonProperty]
-        public readonly long ProjectileIdentifier;
+        [JsonProperty] public readonly long ProjectileIdentifier;
 
-        [JsonProperty]
-        public readonly double ProjectileSpeedSec;
-
-        public Vector2 DespawnPosition => Position + Direction * ProjectileSpeedSec * Game.TimePerFrameSec * (LifeEndTurn - Game.Turn);
-        public Vector2 PositionNextTurn => Position + Direction * ProjectileSpeedSec * Game.TimePerFrameSec;
-        public double MovingDistancePerTurn => ProjectileSpeedSec * Game.TimePerFrameSec;
+        [JsonProperty] public readonly double ProjectileSpeedSec;
 
         internal GameBase Game;
 
         internal Projectile(Vector2 direction, EntityBase entity, GameBase game, long projectileIdentifier, int lifeEndTurn)
         {
             if (!direction.IsUnitVector)
-            {
                 direction = direction.Unit; //Bug: .Unit is slightly inaccurate, causing the above check to fail :S this is a workaround
                 //throw new ArgumentException("Not a direction (unit vector)", nameof(direction));
-            }
 
-            Position = entity.Position + direction * (entity.CharData.HitboxSize + entity.CharData.ProjectileHitboxSize);
+            Position = entity.Position + direction*(entity.CharData.HitboxSize + entity.CharData.ProjectileHitboxSize);
             Direction = direction;
             HitboxSize = entity.CharData.ProjectileHitboxSize;
             Damage = entity.CharData.ProjectileDamage;
@@ -162,7 +153,7 @@
         //}
 
         /// <summary>
-        /// Returns how many turns are needed to fly the given distance. If e.g. 5.5 turns are needed, this will return 5
+        ///     Returns how many turns are needed to fly the given distance. If e.g. 5.5 turns are needed, this will return 5
         /// </summary>
         /// <param name="distance"></param>
         /// <returns></returns>
@@ -170,11 +161,12 @@
         {
             if (distance <= 0)
                 return 0;
-            return (uint)Math.Floor(distance / MovingDistancePerTurn);
+            return (uint) Math.Floor(distance/MovingDistancePerTurn);
         }
 
         /// <summary>
-        /// Returns if this projectile will overlap with the given entity in the given count of turns. Assumes that the entity is moving to the given waypoint.
+        ///     Returns if this projectile will overlap with the given entity in the given count of turns. Assumes that the entity
+        ///     is moving to the given waypoint.
         /// </summary>
         public bool WillHitIn(EntityBase entity, uint turnCount, Vector2 assumedEntityWaypoint)
         {
@@ -182,14 +174,14 @@
             {
                 var dangFrameEntity = entity.GetPositionIn(i, assumedEntityWaypoint);
                 var dangFrameProj = GetPositionIn(i);
-                if (dangFrameProj.Distance(dangFrameEntity, true) <= (HitboxSize + entity.HitboxSize) * (HitboxSize + entity.HitboxSize))
+                if (dangFrameProj.Distance(dangFrameEntity, true) <= (HitboxSize + entity.HitboxSize)*(HitboxSize + entity.HitboxSize))
                     return true;
             }
             return false;
         }
 
         /// <summary>
-        /// Returns if this projectile will overlap with the given entity in the given count of turns.
+        ///     Returns if this projectile will overlap with the given entity in the given count of turns.
         /// </summary>
         public bool WillHitIn(EntityBase entity, uint turnCount)
         {
@@ -198,7 +190,7 @@
 
         public Vector2 GetPositionIn(uint turns)
         {
-            return Position.Extended(DespawnPosition, MovingDistancePerTurn * turns);
+            return Position.Extended(DespawnPosition, MovingDistancePerTurn*turns);
         }
 
         internal void Update()
@@ -211,7 +203,7 @@
 
             Position = PositionNextTurn;
             foreach (var entity in Game.ValidEntities)
-                if (entity.PlayerIdentifier != PlayerIdentifier && entity.Position.Distance(Position, true) <= (HitboxSize + entity.CharData.HitboxSize) * (HitboxSize + entity.CharData.HitboxSize))
+                if (entity.PlayerIdentifier != PlayerIdentifier && entity.Position.Distance(Position, true) <= (HitboxSize + entity.CharData.HitboxSize)*(HitboxSize + entity.CharData.HitboxSize))
                 {
                     Game.HandleDeath(this);
                     entity.InflictDamage(Damage);

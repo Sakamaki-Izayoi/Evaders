@@ -2,9 +2,7 @@
 {
     using System;
     using System.Collections.Generic;
-    using System.Diagnostics;
     using System.Linq;
-    using System.Windows.Forms;
     using Evaders.Client;
     using Evaders.Core.Game;
     using Microsoft.Xna.Framework;
@@ -12,9 +10,9 @@
 
     internal class MainContext : Context
     {
+        private readonly HashSet<long> _ignoredProjectiles = new HashSet<long>();
         private readonly IQueuer _queuer;
         private readonly Random _rnd = new Random(BitConverter.ToInt32(Guid.NewGuid().ToByteArray(), 0));
-        private readonly HashSet<long> _ignoredProjectiles = new HashSet<long>();
 
         public MainContext(IContextManager contextManager, IQueuer queuer) : base(contextManager)
         {
@@ -37,7 +35,8 @@
                 for (var iterations = 0; iterations <= iterationsCount; iterations++)
                 {
                     var currentHits = game.EnemyProjectiles.Where(proj => !_ignoredProjectiles.Contains(proj.ProjectileIdentifier) && WillHit(proj, entity, assumedWaypoint)).ToList();
-                    if (!currentHits.Any()) break;
+                    if (!currentHits.Any())
+                        break;
                     if (currentHits.Count < minHitCount)
                     {
                         minHitCount = currentHits.Count;
@@ -45,16 +44,12 @@
                     }
 
                     var angle = MathHelper.ToRadians(_rnd.Next(0, 360));
-                    var dst = _rnd.Next(0, (int)game.Settings.ArenaRadius);
-                    assumedWaypoint = new Vector2(dst * Math.Sin(angle), dst * Math.Cos(angle));
+                    var dst = _rnd.Next(0, (int) game.Settings.ArenaRadius);
+                    assumedWaypoint = new Vector2(dst*Math.Sin(angle), dst*Math.Cos(angle));
 
                     if (iterations == iterationsCount)
-                    {
                         foreach (var l in minHits.Select(item => item.ProjectileIdentifier))
-                        {
                             _ignoredProjectiles.Add(l);
-                        }
-                    }
                 }
                 if (assumedWaypoint.Distance(entity.MovingTo) > double.Epsilon)
                     entity.MoveTo(assumedWaypoint);
@@ -63,15 +58,12 @@
                 {
                     var enemy = game.EnemyEntities.First();
                     if (_rnd.Next(0, 2) == 0)
-                    {
                         entity.Shoot(enemy.Position);
-                    }
                     else
                     {
                         var turns = entity.GetNeededProjectileTurns(enemy.Position);
-                        entity.Shoot(enemy.GetPositionIn((uint)turns).ExtendedAway(entity.Position, 1337d));
+                        entity.Shoot(enemy.GetPositionIn((uint) turns).ExtendedAway(entity.Position, 1337d));
                     }
-
                 }
             }
             Console.WriteLine("Turn " + game.Turn);
@@ -80,10 +72,8 @@
         private static bool WillHit(Projectile proj, EntityBase entity, Vector2 assumedEntityWaypoint)
         {
             for (var i = 1u; i < 100; i++)
-            {
                 if (proj.WillHitIn(entity, i, assumedEntityWaypoint))
                     return true;
-            }
             return false;
         }
 

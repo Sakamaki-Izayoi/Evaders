@@ -1,12 +1,11 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-
-namespace Evaders.Spectator
+﻿namespace Evaders.Spectator
 {
-    public enum SeeThrough { Fully, Partial, None }
+    public enum SeeThrough
+    {
+        Fully,
+        Partial,
+        None
+    }
 
     public interface IScreenManager
     {

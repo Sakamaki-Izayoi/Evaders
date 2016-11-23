@@ -4,7 +4,6 @@
     using System.Collections.Generic;
     using System.Linq;
     using System.Net;
-    using System.Threading;
     using Evaders.Spectator;
 
     internal class Program : IContextManager
@@ -35,10 +34,7 @@
 
             var visualizer = new SpectatorWindow();
             visualizer.Add(new ScreenGameRenderer(visualizer, context.Connection));
-            visualizer.PostUpdate += () =>
-            {
-                program.Update();
-            };
+            visualizer.PostUpdate += () => { program.Update(); };
             visualizer.Run();
         }
 

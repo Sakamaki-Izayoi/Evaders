@@ -2,7 +2,6 @@
 {
     using System;
     using System.Collections.Generic;
-    using System.IO;
     using System.Linq;
     using System.Net;
     using System.Net.Sockets;
@@ -19,10 +18,10 @@
         private readonly List<IServerUser> _connectedUsers = new List<IServerUser>();
         private readonly List<long> _endedGamesThisFrame = new List<long>();
         private readonly ILogger _logger;
-        private readonly IServerSupervisor _supervisor;
         private readonly IMatchmaking _matchmaking;
         private readonly Dictionary<long, ServerGame> _runningGames = new Dictionary<long, ServerGame>();
         private readonly EasySocket _serverSocket;
+        private readonly IServerSupervisor _supervisor;
         private long _gameIdentifier;
         private long _userIdentifier;
 
@@ -121,15 +120,33 @@
         {
             _connectedUsers.Remove(user);
             if (user.Connected)
-            {
                 user.Dispose();
-            }
             // Todo: instead of letting running games wait for the timeout, kick the user and his entities out right away
         }
 
         string IServer.GetMotd()
         {
             return _supervisor.GetMotd();
+        }
+
+        void IServer.HandleGameEnded(ServerGame serverGame)
+        {
+            _endedGamesThisFrame.Add(serverGame.GameIdentifier);
+            if (serverGame.Users.All(usr => !usr.Connected))
+                return;
+
+            var winner = serverGame.ValidEntities.Any() ? serverGame.Users.First(usr => usr.Identifier == serverGame.ValidEntities.First().PlayerIdentifier) : null;
+            foreach (var serverUser in serverGame.Users)
+                serverUser.Send(Packet.PacketTypeS2C.GameEnd, new GameEnd(serverGame.GameIdentifier, serverGame.Users.ToArray(), serverUser.Identifier == winner?.Identifier, winner));
+            if (winner == null)
+                return;
+            foreach (var serverUser in serverGame.Users)
+                _supervisor.GameEnded(serverGame, winner.Login, serverGame.Users.Where(usr => usr.Identifier != serverUser.Identifier).Select(usr => usr.Login).ToArray());
+        }
+
+        void IServer.HandleGameEndedTurn(ServerGame serverGame)
+        {
+            _supervisor.GameEndedTurn(serverGame);
         }
 
         private void OnClientConnected(object sender, SocketAsyncEventArgs socketAsyncEventArgs)
@@ -181,29 +198,6 @@
                 game.HandleReconnect(serverUser);
             }
             _runningGames.Add(_gameIdentifier, game);
-        }
-
-        void IServer.HandleGameEnded(ServerGame serverGame)
-        {
-            _endedGamesThisFrame.Add(serverGame.GameIdentifier);
-            if (serverGame.Users.All(usr => !usr.Connected))
-                return;
-
-            var winner = serverGame.ValidEntities.Any() ? serverGame.Users.First(usr => usr.Identifier == serverGame.ValidEntities.First().PlayerIdentifier) : null;
-            foreach (var serverUser in serverGame.Users)
-                serverUser.Send(Packet.PacketTypeS2C.GameEnd, new GameEnd(serverGame.GameIdentifier, serverGame.Users.ToArray(), serverUser.Identifier == winner?.Identifier, winner));
-            if (winner == null)
-                return;
-            foreach (var serverUser in serverGame.Users)
-            {
-                _supervisor.GameEnded(serverGame, winner.Login, serverGame.Users.Where(usr => usr.Identifier != serverUser.Identifier).Select(usr => usr.Login).ToArray());
-
-            }
-        }
-
-        void IServer.HandleGameEndedTurn(ServerGame serverGame)
-        {
-            _supervisor.GameEndedTurn(serverGame);
         }
     }
 }
