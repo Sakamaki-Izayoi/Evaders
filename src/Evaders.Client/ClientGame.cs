@@ -29,10 +29,8 @@
         }
 
         [JsonConstructor]
-        private ClientGame(IEnumerable<ClientUser> users, GameSettings settings, IEnumerable<Entity> entities) : base(users, settings)
+        private ClientGame(IEnumerable<ClientUser> users, GameSettings settings, IEnumerable<Entity> entities, IEnumerable<Projectile> projectiles) : base(users, settings, entities, projectiles)
         {
-            Entities.Clear();
-            Entities.AddRange(entities);
         }
 
         internal void SetGameDetails(long myPlayerIdentifier, long gameIdentifier, Connection connection)

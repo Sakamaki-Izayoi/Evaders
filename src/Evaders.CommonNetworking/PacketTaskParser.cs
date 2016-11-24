@@ -3,10 +3,11 @@
     using System;
     using System.Net.Sockets;
     using System.Text;
+    using System.Threading.Tasks;
     using Core.Utility;
     using Microsoft.Extensions.Logging;
 
-    public class PacketParser
+    public class PacketTaskParser
     {
         public event Action<string> OnReceivedJson;
         public event Action<SocketError> OnReceivingFailed;
@@ -17,7 +18,7 @@
         private int _builderByteLength;
         private uint? _waitingMsgLength;
 
-        public PacketParser(ILogger logger, Encoding jsonEncoding)
+        public PacketTaskParser(ILogger logger, Encoding jsonEncoding)
         {
             _logger = logger;
             _jsonEncoding = jsonEncoding;
@@ -36,7 +37,7 @@
                     }
 
                     _logger.LogDebug("Received empty/wrong message: " + socketAsyncEventArgs.SocketError); // anti flood
-                    OnReceivingFailed?.Invoke(socketAsyncEventArgs.SocketError);
+                    Task.Run(() => OnReceivingFailed?.Invoke(socketAsyncEventArgs.SocketError));
                     return;
                 }
 
@@ -60,7 +61,7 @@
                     if (_waitingMsgLength == _builderByteLength)
                         try
                         {
-                            OnReceivedJson?.Invoke(_jsonBuilder.ToString());
+                            Task.Run(() => OnReceivedJson?.Invoke(_jsonBuilder.ToString()));
                         }
                         finally
                         {

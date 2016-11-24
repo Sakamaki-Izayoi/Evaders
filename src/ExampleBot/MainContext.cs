@@ -30,7 +30,7 @@
                 var assumedWaypoint = entity.MovingTo;
                 List<Projectile> minHits = null;
                 var minHitCount = int.MaxValue;
-                const int iterationsCount = 1000;
+                const int iterationsCount = 20;
 
                 for (var iterations = 0; iterations <= iterationsCount; iterations++)
                 {
@@ -47,9 +47,9 @@
                     var dst = _rnd.Next(0, (int) game.Settings.ArenaRadius);
                     assumedWaypoint = new Vector2(dst*Math.Sin(angle), dst*Math.Cos(angle));
 
-                    if (iterations == iterationsCount)
-                        foreach (var l in minHits.Select(item => item.ProjectileIdentifier))
-                            _ignoredProjectiles.Add(l);
+                    //if (iterations == iterationsCount)
+                    //    foreach (var l in minHits.Select(item => item.ProjectileIdentifier))
+                    //        _ignoredProjectiles.Add(l);
                 }
                 if (assumedWaypoint.Distance(entity.MovingTo) > double.Epsilon)
                     entity.MoveTo(assumedWaypoint);

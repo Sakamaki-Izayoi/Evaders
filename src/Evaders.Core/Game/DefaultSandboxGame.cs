@@ -4,7 +4,7 @@
 
     public abstract class DefaultSandboxGame<TUser> : Game<TUser> where TUser : IUser
     {
-        public IReadOnlyList<Entity> ValidEntitesControllable => Entities;
+        public IEnumerable<Entity> ValidEntitesControllable => Entities;
 
         protected DefaultSandboxGame(IEnumerable<TUser> users, GameSettings settings) : base(users, settings)
         {

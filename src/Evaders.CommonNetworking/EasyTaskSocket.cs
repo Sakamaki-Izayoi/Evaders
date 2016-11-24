@@ -85,7 +85,7 @@
         }
 
         /// <summary>
-        ///     Stops all activity from this wrapper class. The underlying socket is still valid
+        ///     Stops all activity from this wrapper class. The underlying socket is still valid. This will not immediately stop all jobs, it just won't restart them on the next iteration.
         /// </summary>
         public void StopJobs()
         {

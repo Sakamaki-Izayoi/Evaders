@@ -28,7 +28,6 @@
         [JsonProperty]
         public bool IsBot { get; private set; }
 
-        public bool Disposed => _socket.Stopped;
         public bool Authorized { get; private set; }
         public bool FullGameState { get; private set; } // Send full game state each turn or just differences
         private readonly ILogger _logger;
@@ -36,7 +35,8 @@
         private readonly IServer _server;
 
         private PacketParser _packetParser;
-        private EasySocket _socket;
+        private EasyTaskSocket _socket;
+        private readonly object _authLock = new object();
 
         public User(Socket socket, ILogger logger, IServer server, IRulesProvider rules)
         {
@@ -86,11 +86,6 @@
             _socket.Dispose();
         }
 
-        public void Update()
-        {
-            _socket.Work();
-        }
-
         private void OnPacket(string json)
         {
             HandlePacket(JsonNet.Deserialize<PacketC2S>(json));
@@ -98,8 +93,8 @@
 
         private void SetupSocket(Socket socket)
         {
-            _socket = new EasySocket(socket);
-            _socket.StartJobs(EasySocket.SocketTasks.Receive);
+            _socket = new EasyTaskSocket(socket);
+            _socket.StartJobs(EasyTaskSocket.SocketTasks.Receive);
             _socket.OnSent += OnSent;
             _socket.OnReceived += (sender, args) =>
             {
@@ -145,54 +140,58 @@
             }
             _logger.LogDebug($"{this} sent packet: {packet.Type}");
 
-            switch ((Packet.PacketTypeC2S) packet.TypeNum)
+            switch ((Packet.PacketTypeC2S)packet.TypeNum)
             {
                 case Packet.PacketTypeC2S.Authorize:
-                    if (Authorized)
+                    lock (_authLock)
                     {
-                        IllegalAction("Already authorized");
-                        return;
+                        if (Authorized)
+                        {
+                            IllegalAction("Already authorized");
+                            return;
+                        }
+                        var authorize = packet.GetPayload<Authorize>();
+                        Login = authorize.Identifier;
+                        Username = authorize.Name;
+                        FullGameState = authorize.FullGameState;
+
+                        if (Username.Length > _rules.MaxUsernameLength)
+                        {
+                            IllegalAction("Are you Daenerys Targaryen? No? Then you can't possibly have a name that long. (Exceeded name length limitation)");
+                            return;
+                        }
+
+                        if (Login == null || Login.ToByteArray().Distinct().Count() <= 1)
+                        {
+                            IllegalAction("Invalid login. The login is supposed to be a GUID of your choice (choose any, but keep that one!). It needs to be in a notation that can be parsed by this: https://msdn.microsoft.com/en-us/library/system.guid.parse(v=vs.110).aspx");
+                            return;
+                        }
+
+                        if (string.IsNullOrWhiteSpace(Username))
+                        {
+                            IllegalAction("Now, don't get me wrong, I really like your name. Reminds me of 'No Game No Life'. However, the spectator client will be really sad if he can't render anything, so please be a little more creative and come back with something not-empty!");
+                            return;
+                        }
+
+                        Identifier = _server.GenerateUniqueUserIdentifier();
+                        Authorized = true;
+
+                        IServerUser existingConnection;
+
+                        if (_server.WouldAuthCollide(Login, this, out existingConnection))
+                        {
+                            _logger.LogInformation($"User relogging: {this} -> {existingConnection}");
+                            if (existingConnection.Authorized && existingConnection.Connected && !Address.Equals(existingConnection.Address))
+                                _logger.LogWarning($"Possible account sharing: {this} and {existingConnection}");
+
+                            existingConnection.Inherit(this, _socket.Socket);
+                            Authorized = false;
+                            _server.Kick(this);
+                            _server.HandleUserReconnect(existingConnection);
+                            return;
+                        }
+                        Send(Packet.PacketTypeS2C.AuthState, new AuthState(true, _server.GetMotd()));
                     }
-                    var authorize = packet.GetPayload<Authorize>();
-                    Login = authorize.Identifier;
-                    Username = authorize.Name;
-                    FullGameState = authorize.FullGameState;
-
-                    if (Username.Length > _rules.MaxUsernameLength)
-                    {
-                        IllegalAction("Are you Daenerys Targaryen? No? Then you can't possibly have a name that long. (Exceeded name length limitation)");
-                        return;
-                    }
-
-                    if (Login == null || Login.ToByteArray().Distinct().Count() <= 1)
-                    {
-                        IllegalAction("Invalid login. The login is supposed to be a GUID of your choice (choose any, but keep that one!). It needs to be in a notation that can be parsed by this: https://msdn.microsoft.com/en-us/library/system.guid.parse(v=vs.110).aspx");
-                        return;
-                    }
-
-                    if (string.IsNullOrWhiteSpace(Username))
-                    {
-                        IllegalAction("Now, don't get me wrong, I really like your name. Reminds me of 'No Game No Life'. However, the spectator client will be really sad if he can't render anything, so please be a little more creative and come back with something not-empty!");
-                        return;
-                    }
-
-                    Identifier = _server.GenerateUniqueUserIdentifier();
-                    Authorized = true;
-
-                    var existingConnection = _server.ConnectedUsers.FirstOrDefault(item => item.Login == Login && item != this);
-                    if (existingConnection != null)
-                    {
-                        _logger.LogInformation($"User relogging: {this} -> {existingConnection}");
-                        if (existingConnection.Authorized && existingConnection.Connected && !Address.Equals(existingConnection.Address))
-                            _logger.LogWarning($"Possible account sharing: {this} and {existingConnection}");
-
-                        existingConnection.Inherit(this, _socket.Socket);
-                        Authorized = false;
-                        _server.Kick(this);
-                        _server.HandleUserReconnect(existingConnection);
-                        return;
-                    }
-                    Send(Packet.PacketTypeS2C.AuthState, new AuthState(true, _server.GetMotd()));
                     break;
                 case Packet.PacketTypeC2S.GameAction:
                     _server.HandleUserAction(this, packet.GetPayload<LiveGameAction>());
