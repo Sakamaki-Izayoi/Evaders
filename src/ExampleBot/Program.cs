@@ -4,7 +4,7 @@
     using System.Collections.Generic;
     using System.Linq;
     using System.Net;
-    using Evaders.Spectator.DirectX;
+    using Evaders.Spectator.OpenGL;
 
     internal class Program : IContextManager
     {

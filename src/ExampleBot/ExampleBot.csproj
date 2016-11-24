@@ -170,7 +170,7 @@
     </ProjectReference>
     <ProjectReference Include="..\Evaders.Spectator.OpenGL\Evaders.Spectator.OpenGL.csproj">
       <Project>{a4cab622-6271-42e0-9983-0bc362973a0e}</Project>
-      <Name>Evaders.Spectator.DirectX</Name>
+      <Name>Evaders.Spectator.OpenGL</Name>
     </ProjectReference>
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />

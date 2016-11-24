@@ -7,7 +7,7 @@
     using Newtonsoft.Json;
     using Utility;
 
-    public abstract class Game<TUser, TEntity> : GameBase where TUser : IUser where TEntity : EntityBase
+    public abstract class Game<TUser> : GameBase where TUser : IUser
     {
         public override double TimePerFrameSec => 1d/Settings.FramesPerSecond;
         public bool GameEnded => Entities.All(entity => entity.PlayerIdentifier == Entities.FirstOrDefault()?.PlayerIdentifier);
@@ -19,17 +19,17 @@
         public override IReadOnlyList<Projectile> ValidProjectiles => Projectiles;
         private readonly long _entityIdentifier;
 
-        private readonly List<TEntity> _toRemoveEntities = new List<TEntity>();
+        private readonly List<Entity> _toRemoveEntities = new List<Entity>();
         private readonly List<Projectile> _toRemoveProjectiles = new List<Projectile>();
         private readonly Dictionary<TUser, List<GameAction>> _users;
 
-        [JsonProperty] protected readonly List<TEntity> Entities = new List<TEntity>();
+        [JsonProperty] protected readonly List<Entity> Entities = new List<Entity>();
 
         [JsonProperty] protected readonly List<Projectile> Projectiles = new List<Projectile>();
 
         private long _projectileIdentifier;
 
-        public Game(IEnumerable<TUser> users, GameSettings settings, IEntityFactory<TEntity> entityFactory) : base(settings)
+        public Game(IEnumerable<TUser> users, GameSettings settings) : base(settings)
         {
             _users = users.ToDictionary(item => item, item => new List<GameAction>());
 
@@ -37,7 +37,7 @@
             var rotateBy = 360f/_users.Count;
             foreach (var user in _users)
             {
-                Entities.Add(entityFactory.Create(Settings.DefaultCharacterData, unitUp*(Settings.ArenaRadius - Settings.DefaultCharacterData.HitboxSize), user.Key.Identifier, _entityIdentifier++, this)); // new Entity<TUser>(Settings.DefaultCharacterData, unitUp * (Settings.ArenaRadius - Settings.DefaultCharacterData.HitboxSize), user.Key.Identifier, _entityIdentifier++, this));
+                Entities.Add(new Entity(Settings.DefaultCharacterData, unitUp * (Settings.ArenaRadius - Settings.DefaultCharacterData.HitboxSize), user.Key.Identifier, _entityIdentifier++, this));
                 unitUp = unitUp.RotatedDegrees(rotateBy);
             }
         }
@@ -145,7 +145,7 @@
 
         protected internal override void HandleDeath(EntityBase entity)
         {
-            _toRemoveEntities.Add((TEntity) entity);
+            _toRemoveEntities.Add((Entity) entity);
         }
 
         protected internal override void HandleDeath(Projectile projectile)

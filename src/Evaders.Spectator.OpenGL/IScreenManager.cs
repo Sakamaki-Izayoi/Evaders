@@ -1,4 +1,4 @@
-﻿namespace Evaders.Spectator.DirectX
+﻿namespace Evaders.Spectator.OpenGL
 {
     public enum SeeThrough
     {

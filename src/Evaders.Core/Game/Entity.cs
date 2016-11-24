@@ -3,9 +3,9 @@
     using System;
     using Utility;
 
-    public class ControllableEntity : EntityBase
+    public class Entity : EntityBase
     {
-        public ControllableEntity(CharacterData charData, Vector2 position, long playerIdentifier, long entityIdentifier, GameBase game) : base(charData, position, playerIdentifier, entityIdentifier, game)
+        public Entity(CharacterData charData, Vector2 position, long playerIdentifier, long entityIdentifier, GameBase game) : base(charData, position, playerIdentifier, entityIdentifier, game)
         {
         }
 

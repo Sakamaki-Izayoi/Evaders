@@ -40,17 +40,13 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Game\CharacterData.cs" />
-    <Compile Include="Game\ControllableEntity.cs" />
-    <Compile Include="Game\ControllableEntityFactory.cs" />
-    <Compile Include="Game\DefaultEntityFactory.cs" />
-    <Compile Include="Game\DefaultGame.cs" />
+    <Compile Include="Game\Entity.cs" />
     <Compile Include="Game\DefaultSandboxGame.cs" />
     <Compile Include="Game\EntityBase.cs" />
     <Compile Include="Game\Game.cs" />
     <Compile Include="Game\GameAction.cs" />
     <Compile Include="Game\GameActionType.cs" />
     <Compile Include="Game\GameBase.cs" />
-    <Compile Include="Game\IEntityFactory.cs" />
     <Compile Include="Utility\GameContractResolver.cs" />
     <Compile Include="Game\GameSettings.cs" />
     <Compile Include="Game\IUser.cs" />
