@@ -30,7 +30,7 @@
         public Vector2 PositionNextTurn => GetPositionIn(1);
 
         [JsonProperty]
-        public CharacterData CharData;
+        public readonly CharacterData CharData;
 
         internal GameBase Game;
 

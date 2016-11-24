@@ -1,4 +1,4 @@
-﻿namespace Evaders.Spectator
+﻿namespace Evaders.Spectator.DirectX
 {
     using System;
     using Microsoft.Xna.Framework;

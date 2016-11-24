@@ -1,4 +1,4 @@
-﻿namespace Evaders.Spectator
+﻿namespace Evaders.Spectator.DirectX
 {
     using System.Collections.Generic;
     using System.Linq;
