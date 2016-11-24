@@ -60,72 +60,75 @@
 
         protected void NextTurn()
         {
-            foreach (var user in _users)
+            lock (NextTurnLock)
             {
-                while (!user.Value.IsEmpty)
+                foreach (var user in _users)
                 {
-                    GameAction gameAction;
-                    if (!user.Value.TryTake(out gameAction))
-                        continue;
-
-                    Entity controlledEntity;
-                    if (!_entities.TryGetValue(gameAction.ControlledEntityIdentifier, out controlledEntity))
+                    while (!user.Value.IsEmpty)
                     {
-                        OnIllegalAction(user.Key, "You are controlling a not existing entity: " + gameAction.ControlledEntityIdentifier);
-                        continue;
-                    }
-                    if (controlledEntity.PlayerIdentifier != user.Key.Identifier)
-                    {
-                        OnIllegalAction(user.Key, "You cannot control an enemy untit :)");
-                        continue;
-                    }
-
-                    bool result;
-                    switch (gameAction.Type)
-                    {
-                        case GameActionType.Move:
-                            result = controlledEntity.MoveToInternal(gameAction.Position);
-                            break;
-                        case GameActionType.Shoot:
-                            result = controlledEntity.ShootInternal(gameAction.Position);
-                            break;
-                        default:
-                            OnIllegalAction(user.Key, "Unknown Action: " + (int)gameAction.Type);
+                        GameAction gameAction;
+                        if (!user.Value.TryTake(out gameAction))
                             continue;
+
+                        Entity controlledEntity;
+                        if (!_entities.TryGetValue(gameAction.ControlledEntityIdentifier, out controlledEntity))
+                        {
+                            OnIllegalAction(user.Key, "You are controlling a not existing entity: " + gameAction.ControlledEntityIdentifier);
+                            continue;
+                        }
+                        if (controlledEntity.PlayerIdentifier != user.Key.Identifier)
+                        {
+                            OnIllegalAction(user.Key, "You cannot control an enemy untit :)");
+                            continue;
+                        }
+
+                        bool result;
+                        switch (gameAction.Type)
+                        {
+                            case GameActionType.Move:
+                                result = controlledEntity.MoveToInternal(gameAction.Position);
+                                break;
+                            case GameActionType.Shoot:
+                                result = controlledEntity.ShootInternal(gameAction.Position);
+                                break;
+                            default:
+                                OnIllegalAction(user.Key, "Unknown Action: " + (int)gameAction.Type);
+                                continue;
+                        }
+                        if (!result)
+                            OnIllegalAction(user.Key, "Illegal action: " + gameAction);
+                        else
+                            OnActionExecuted(user.Key, gameAction);
                     }
-                    if (!result)
-                        OnIllegalAction(user.Key, "Illegal action: " + gameAction);
-                    else
-                        OnActionExecuted(user.Key, gameAction);
                 }
+
+                foreach (var entity in _entities)
+                    entity.Value.Update();
+
+                foreach (var projectile in _projectiles)
+                    projectile.Value.Update();
+
+                foreach (var removeEntity in _toRemoveEntities)
+                {
+                    Entity removed;
+                    _entities.TryRemove(removeEntity.EntityIdentifier, out removed);
+                }
+                _toRemoveEntities.Clear();
+
+                foreach (var removeProjectile in _toRemoveProjectiles)
+                {
+                    Projectile removed;
+                    _projectiles.TryRemove(removeProjectile.ProjectileIdentifier, out removed);
+                }
+                _toRemoveProjectiles.Clear();
+
+                Turn++;
+
+                if (GameEnded)
+                    OnGameEnd();
+                else
+                    OnTurnEnded();
             }
-
-            foreach (var entity in _entities)
-                entity.Value.Update();
-
-            foreach (var projectile in _projectiles)
-                projectile.Value.Update();
-
-            foreach (var removeEntity in _toRemoveEntities)
-            {
-                Entity removed;
-                _entities.TryRemove(removeEntity.EntityIdentifier, out removed);
-            }
-            _toRemoveEntities.Clear();
-
-            foreach (var removeProjectile in _toRemoveProjectiles)
-            {
-                Projectile removed;
-                _projectiles.TryRemove(removeProjectile.ProjectileIdentifier, out removed);
-            }
-            _toRemoveProjectiles.Clear();
-
-            Turn++;
-
-            if (GameEnded)
-                OnGameEnd();
-            else
-                OnTurnEnded();
         }
 
         /// <summary>
@@ -207,11 +210,11 @@
 
         public bool HasUser(TUser user) => _users.ContainsKey(user);
 
-        protected abstract void OnActionExecuted(TUser @from, GameAction action);
+        protected virtual void OnActionExecuted(TUser @from, GameAction action) { }
 
-        protected abstract void OnTurnEnded();
+        protected virtual void OnTurnEnded() { }
 
-        protected abstract void OnGameEnd();
+        protected virtual void OnGameEnd() { }
 
         protected abstract void OnIllegalAction(TUser user, string warningMsg);
 
