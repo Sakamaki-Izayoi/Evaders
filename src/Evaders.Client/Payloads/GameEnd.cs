@@ -7,8 +7,8 @@
         internal class ServerUser
         {
             public readonly long Identifier;
-            public readonly string Username;
             public readonly bool IsBot;
+            public readonly string Username;
 
             [JsonConstructor]
             public ServerUser(long identifier, string username, bool isBot)
@@ -20,9 +20,9 @@
         }
 
         public readonly long GameIdentifier;
-        public readonly bool YouWon;
-        public readonly ServerUser Winner;
         public readonly ServerUser[] Participants;
+        public readonly ServerUser Winner;
+        public readonly bool YouWon;
 
         [JsonConstructor]
         public GameEnd(long gameIdentifier, bool youWon, ServerUser winner, ServerUser[] participants)

@@ -1,7 +1,6 @@
 ﻿namespace Evaders.Client
 {
     using System;
-    using System.Security.Cryptography;
     using Microsoft.Extensions.Logging;
 
     public class SilentLogger : ILogger
@@ -14,7 +13,7 @@
         /// <inheritdoc />
         public bool IsEnabled(LogLevel logLevel)
         {
-            return true;
+            return false;
         }
 
         /// <inheritdoc />

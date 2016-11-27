@@ -34,10 +34,7 @@
 
             var visualizer = new SpectatorWindow();
             visualizer.Add(new ScreenGameRenderer(visualizer, context.Connection));
-            visualizer.PostUpdate += () =>
-            {
-                program.Update();
-            };
+            visualizer.PostUpdate += () => { program.Update(); };
             visualizer.Run();
         }
 

@@ -8,7 +8,6 @@
     using System.Text;
     using CommonNetworking;
     using CommonNetworking.CommonPayloads;
-    using Core.Utility;
     using Microsoft.Extensions.Logging;
     using Newtonsoft.Json;
 
@@ -30,13 +29,13 @@
 
         public bool Authorized { get; private set; }
         public bool FullGameState { get; private set; } // Send full game state each turn or just differences
+        private readonly object _authLock = new object();
         private readonly ILogger _logger;
         private readonly IRulesProvider _rules;
         private readonly IServer _server;
 
         private PacketParser _packetParser;
         private EasyTaskSocket _socket;
-        private readonly object _authLock = new object();
 
         public User(Socket socket, ILogger logger, IServer server, IRulesProvider rules)
         {
@@ -140,7 +139,7 @@
             }
             _logger.LogDebug($"{this} sent packet: {packet.Type}");
 
-            switch ((Packet.PacketTypeC2S)packet.TypeNum)
+            switch ((Packet.PacketTypeC2S) packet.TypeNum)
             {
                 case Packet.PacketTypeC2S.Authorize:
                     lock (_authLock)

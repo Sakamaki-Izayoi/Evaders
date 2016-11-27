@@ -1,28 +1,41 @@
 ﻿namespace Evaders.Core.Game
 {
+    using System;
     using Newtonsoft.Json;
 
     public class GameSettings
     {
-        public virtual bool IsValid => ArenaRadius > 0 && FramesPerSecond > 0 && MaxFrameTimeSec > 0 && DefaultCharacterData.IsValid;
+        public virtual bool IsValid => ArenaRadius > 0 && TurnsPerSecond > 0 && MaxTurnTimeSec > 0 && DefaultCharacterData.IsValid && ArenaShrinkStartTurn >= 0 && ArenaShrinkPerSec > 0f && OutOfArenaDamagePerTurn > 0;
 
-        [JsonProperty] public readonly float ArenaRadius;
+        [JsonProperty]
+        public int ArenaShrinkStartTurn => (int) Math.Ceiling(ArenaShrinkStartSec/(1d/TurnsPerSecond));
+
+        [JsonProperty] public readonly double ArenaRadius;
+
+        [JsonProperty] public readonly double ArenaShrinkPerSec;
+
+        [JsonProperty] public readonly double ArenaShrinkStartSec;
 
         [JsonProperty] public readonly CharacterData DefaultCharacterData;
 
-        [JsonProperty] public readonly int FramesPerSecond;
+        [JsonProperty] public readonly double MaxTurnTimeSec;
 
-        [JsonProperty] public readonly float MaxFrameTimeSec;
+        [JsonProperty] public readonly int OutOfArenaDamagePerTurn = 1;
 
-        [JsonProperty] public readonly float ProjectileLifeTimeSec;
+        [JsonProperty] public readonly double ProjectileLifeTimeSec;
+
+        [JsonProperty] public readonly int TurnsPerSecond;
 
         [JsonConstructor]
-        public GameSettings(float arenaRadius, int framesPerSecond, float maxFrameTimeSec, float projectileLifeTimeSec, CharacterData defaultCharacterData)
+        public GameSettings(double arenaRadius, int turnsPerSecond, double maxTurnTimeSec, double projectileLifeTimeSec, CharacterData defaultCharacterData, double arenaShrinkStartSec, double arenaShrinkPerSec, int outOfArenaDamagePerTurn)
         {
             DefaultCharacterData = defaultCharacterData;
+            ArenaShrinkStartSec = arenaShrinkStartSec;
+            ArenaShrinkPerSec = arenaShrinkPerSec;
+            OutOfArenaDamagePerTurn = outOfArenaDamagePerTurn;
             ArenaRadius = arenaRadius;
-            FramesPerSecond = framesPerSecond;
-            MaxFrameTimeSec = maxFrameTimeSec;
+            TurnsPerSecond = turnsPerSecond;
+            MaxTurnTimeSec = maxTurnTimeSec;
             ProjectileLifeTimeSec = projectileLifeTimeSec;
         }
     }

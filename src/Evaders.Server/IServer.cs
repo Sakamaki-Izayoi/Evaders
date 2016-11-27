@@ -1,7 +1,6 @@
 ﻿namespace Evaders.Server
 {
     using System;
-    using System.Collections.Generic;
     using CommonNetworking.CommonPayloads;
 
     internal interface IServer

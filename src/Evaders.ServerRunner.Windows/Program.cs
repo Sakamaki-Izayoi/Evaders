@@ -3,7 +3,6 @@
     using System;
     using System.ServiceProcess;
     using System.Threading;
-    using Core.Utility;
     using Microsoft.Extensions.Logging;
     using Microsoft.Extensions.Logging.Console;
     using Server;

@@ -8,7 +8,6 @@
     using CommonNetworking;
     using CommonNetworking.CommonPayloads;
     using Core.Game;
-    using Core.Utility;
     using Extensions;
     using Microsoft.Extensions.Logging;
     using Newtonsoft.Json;
@@ -21,10 +20,9 @@
         private readonly Stopwatch _time = Stopwatch.StartNew();
         private readonly ConcurrentDictionary<IServerUser, bool> _turnEndUsers = new ConcurrentDictionary<IServerUser, bool>();
 
-        [JsonProperty]
-        public readonly long GameIdentifier;
-
         private readonly object _updateLock = new object();
+
+        [JsonProperty] public readonly long GameIdentifier;
 
         private double _lastFrameSec;
 
@@ -44,23 +42,19 @@
                 var time = _time.Elapsed.TotalSeconds;
                 var elapsed = time - _lastFrameSec;
 
-                if (elapsed > Settings.MaxFrameTimeSec)
-                {
+                if (elapsed > Settings.MaxTurnTimeSec)
                     lock (NextTurnLock)
                     {
-                        if (elapsed > Settings.MaxFrameTimeSec)
+                        if (elapsed > Settings.MaxTurnTimeSec)
                         {
                             _logger.LogTrace($"Forcing advancement of game {GameIdentifier}");
                             foreach (var user in Users.Where(usr => usr.Connected && !IsUserReady(usr)))
-                            {
                                 //_turnEndUsers[user] = true;
-                                OnIllegalAction(user, $"You took too long for your turn. The longest you may think is: {Settings.MaxFrameTimeSec} sec. You skipped the turn!");
+                                OnIllegalAction(user, $"You took too long for your turn. The longest you may think is: {Settings.MaxTurnTimeSec} sec. You skipped the turn!");
                                 //user.Dispose(); // rip socket
-                            }
                             NextTurn();
                         }
                     }
-                }
             }
         }
 
@@ -89,9 +83,7 @@
         {
             bool ready;
             if (!_turnEndUsers.TryGetValue(user, out ready))
-            {
                 throw new Exception("Turn-end user dictionary invalid");
-            }
             return ready;
         }
 
@@ -116,68 +108,6 @@
             AddAction(user, action);
         }
 
-        //public void UserRequestsEndTurn(User from)
-        //{
-        //    if (_turnEndUsers.Contains(from))
-        //    {
-        //        from.Send(new PacketS2C(PacketS2C.PacketTypeS2C.IllegalAction, "Please wait for others to get ready. No need to spam! In fact, it could cost you a turn :)"));
-        //        return;
-        //    }
-        //    if (!_users.ContainsKey(@from))
-        //    {
-        //        from.Send(new PacketS2C(PacketS2C.PacketTypeS2C.IllegalAction, "You can't end your turn in a game you don't even play in"));
-        //        return;
-        //    }
-        //    _turnEndUsers.Add(from);
-
-        //    if (_users.Where(usr => usr.Key.Connected).All(usr => _turnEndUsers.Contains(usr.Key)))
-        //        return;
-
-
-        //    Replay.NextFrame();
-
-        //    foreach (var entity in Entities)
-        //        entity.Update();
-
-        //    foreach (var projectile in Projectiles)
-        //        projectile.Update();
-
-        //    foreach (var removeEntity in _toRemoveEntities)
-        //        Entities.Remove(removeEntity);
-
-        //    foreach (var removeProjectile in _toRemoveProjectiles)
-        //        Projectiles.Remove(removeProjectile);
-
-        //    foreach (var keyValuePair in _users)
-        //        keyValuePair.Value.Clear();
-
-        //    if (GameEnded)
-        //    {
-        //        var hasWinner = Entities.Any();
-        //        var winner = hasWinner ? _users.First(item => item.Key.Identifier == Entities.First().PlayerIdentifier).Key.Username : "None";
-        //        var winnerPublicId = hasWinner ? (long?)Entities.First().PlayerIdentifier : null;
-        //        var gameResult = new MatchHistory.FinishedMatch(_users.Select(item => item.Key.Username).ToArray(), _server.GetRunningGameId(this), Turn * TimePerFrameSec, winner, winnerPublicId);
-        //        Broadcast(new PacketS2C(PacketS2C.PacketTypeS2C.GameEnd, gameResult));
-        //        _server.EndGame(this, gameResult);
-        //    }
-        //    else
-        //    {
-        //        foreach (var user in _users.Where(user => user.Key.FullGameState))
-        //            user.Key.Send(new PacketS2C(PacketS2C.PacketTypeS2C.GameState, new GameState(Identifier, this)));
-        //        Broadcast(new PacketS2C(PacketS2C.PacketTypeS2C.NextRound, Identifier));
-        //    }
-        //}
-
-
-        //public void OnGameEnd(Game game)
-        //{
-        //    var hasWinner = Entities.Any();
-        //    var winner = hasWinner ? _users.First(item => item.Key.Identifier == Entities.First().PlayerIdentifier).Key.Username : "None";
-        //    var winnerPublicId = hasWinner ? (long?)Entities.First().PlayerIdentifier : null;
-        //    var gameResult = new MatchHistory.FinishedMatch(_users.Select(item => item.Key.Username).ToArray(), _server.GetRunningGameId(this), Turn * TimePerFrameSec, winner, winnerPublicId);
-        //    Broadcast(new PacketS2C(PacketS2C.PacketTypeS2C.GameEnd, gameResult));
-        //    _server.EndGame(this, gameResult);
-        //}
 
         public void HandleReconnect(IServerUser user)
         {

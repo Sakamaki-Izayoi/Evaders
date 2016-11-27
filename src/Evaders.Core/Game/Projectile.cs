@@ -35,7 +35,7 @@
         {
             if (!direction.IsUnitVector)
                 direction = direction.Unit; //Bug: .Unit is slightly inaccurate, causing the above check to fail :S this is a workaround
-                //throw new ArgumentException("Not a direction (unit vector)", nameof(direction));
+            //throw new ArgumentException("Not a direction (unit vector)", nameof(direction));
 
             Position = entity.Position + direction*(entity.CharData.HitboxSize + entity.CharData.ProjectileHitboxSize);
             Direction = direction;
@@ -193,7 +193,12 @@
             return Position.Extended(DespawnPosition, MovingDistancePerTurn*turns);
         }
 
-        internal void Update()
+        internal void UpdateMovement()
+        {
+            Position = PositionNextTurn;
+        }
+
+        internal void UpdateCombat()
         {
             if (Game.Turn >= LifeEndTurn)
             {
@@ -201,7 +206,6 @@
                 return;
             }
 
-            Position = PositionNextTurn;
             foreach (var entity in Game.ValidEntities)
                 if (entity.PlayerIdentifier != PlayerIdentifier && entity.Position.Distance(Position, true) <= (HitboxSize + entity.CharData.HitboxSize)*(HitboxSize + entity.CharData.HitboxSize))
                 {

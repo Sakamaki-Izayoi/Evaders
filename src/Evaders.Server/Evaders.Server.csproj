@@ -55,7 +55,6 @@
     <Compile Include="Payloads\GameEnd.cs" />
     <Compile Include="Payloads\GameState.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
-    <Compile Include="AsyncSaving.cs" />
     <Compile Include="ServerConfiguration.cs" />
     <Compile Include="ServerGame.cs" />
     <Compile Include="User.cs" />
