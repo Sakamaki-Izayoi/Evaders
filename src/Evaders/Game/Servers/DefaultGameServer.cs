@@ -7,6 +7,7 @@
     using Microsoft.Extensions.Logging;
     using Microsoft.Extensions.Options;
     using Server;
+    using Server.Integration;
     using Services;
 
     [UsedImplicitly]
@@ -19,7 +20,7 @@
         private readonly ILoggerFactory _loggerFactory;
         private readonly IProviderFactory<IServerSupervisor> _serverSupervisorFactory;
         private readonly IProviderFactory<IMatchmaking> _matchmakingFactory;
-        private readonly IProviderFactory<ServerConfiguration> _serverConfigurationFactory;
+        private readonly IProviderFactory<ServerSettings> _serverConfigurationFactory;
         private readonly GameServerSettings _settings;
 
         /* Task related stuff */
@@ -36,7 +37,7 @@
         private readonly ILogger _logger;
 
 
-        public DefaultGameServer(ILoggerFactory loggerFactory, IProviderFactory<IServerSupervisor> serverSupervisorFactory, IProviderFactory<IMatchmaking> matchmakingFactory, IProviderFactory<ServerConfiguration> serverConfigurationFactory, IOptions<GameServerSettings> settings)
+        public DefaultGameServer(ILoggerFactory loggerFactory, IProviderFactory<IServerSupervisor> serverSupervisorFactory, IProviderFactory<IMatchmaking> matchmakingFactory, IProviderFactory<ServerSettings> serverConfigurationFactory, IOptions<GameServerSettings> settings)
         {
             _loggerFactory = loggerFactory;
             _logger = loggerFactory.CreateLogger<DefaultGameServer>();

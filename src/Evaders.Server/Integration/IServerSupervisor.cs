@@ -1,4 +1,4 @@
-﻿namespace Evaders.Server
+﻿namespace Evaders.Server.Integration
 {
     using System;
     using System.Collections.Generic;

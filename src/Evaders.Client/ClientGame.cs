@@ -67,7 +67,7 @@
 
         protected override void OnIllegalAction(ClientUser user, string warningMsg)
         {
-            throw new GameException($"Source: Local (Client), Message: {warningMsg}");
+            throw new GameException($"Source: Local (Client), Motd: {warningMsg}");
         }
 
         private void EndTurn()

@@ -189,7 +189,7 @@
                             _server.HandleUserReconnect(existingConnection);
                             return;
                         }
-                        Send(Packet.PacketTypeS2C.AuthState, new AuthState(true, _server.GetMotd()));
+                        Send(Packet.PacketTypeS2C.AuthResult, new AuthCompleted(_server.GetMotd(), _server.GetGameModes()));
                     }
                     break;
                 case Packet.PacketTypeC2S.GameAction:
@@ -200,10 +200,10 @@
                     _logger.LogInformation($"{this} is now a passive bot: {IsBot}");
                     break;
                 case Packet.PacketTypeC2S.EnterQueue:
-                    _server.HandleUserEnterQueue(this, Math.Max(packet.GetPayload<int>(), 1));
+                    _server.HandleUserEnterQueue(this, packet.GetPayload<QueueAction>());
                     break;
                 case Packet.PacketTypeC2S.LeaveQueue:
-                    _server.HandleUserLeaveQueue(this, Math.Max(packet.GetPayload<int>(), 1));
+                    _server.HandleUserLeaveQueue(this, packet.GetPayload<QueueAction>());
                     break;
                 case Packet.PacketTypeC2S.TurnEnd:
                     _server.HandleUserEndTurn(this, packet.GetPayload<long>());

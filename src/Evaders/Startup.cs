@@ -16,6 +16,7 @@
     using Microsoft.Extensions.Options;
     using Models;
     using Server;
+    using Server.Integration;
     using Services;
     using Services.Factories;
     using Services.Providers;
@@ -121,8 +122,8 @@
 
             services.GetService<IProviderFactory<IServerSupervisor>>().AddProvider(new DefaultProvider<IServerSupervisor>("default", () => new DefaultServerSupervisor(services.GetService<ILogger<DefaultServerSupervisor>>())));
             services.GetService<IProviderFactory<IMatchmaking>>().AddProvider(new DefaultProvider<IMatchmaking>("default", () => new Matchmaking(15f, services.GetService<ILogger<Matchmaking>>(), services.GetService<IProviderFactory<IServerSupervisor>>().Create(settings.SupervisorProviderId))));
-            services.GetService<IProviderFactory<ServerConfiguration>>().AddProvider(new DefaultProvider<ServerConfiguration>("default", () => ServerConfiguration.Default));
-            // todo load ServerConfiguration from gamsettings.json
+            services.GetService<IProviderFactory<ServerSettings>>().AddProvider(new DefaultProvider<ServerSettings>("default", () => ServerSettings.Default));
+            // todo load ServerSettings from gamsettings.json
 
 
             var gameServer = services.GetService<IGameServer>();

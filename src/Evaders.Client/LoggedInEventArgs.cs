@@ -1,16 +1,19 @@
 ﻿namespace Evaders.Client
 {
     using System;
+    using CommonNetworking.CommonPayloads;
 
     public class LoggedInEventArgs : EventArgs
     {
-        public readonly string Message;
         public readonly IQueuer Queuer;
+        public readonly string Motd;
+        public readonly string[] GameModes;
 
-        public LoggedInEventArgs(IQueuer queuer, string message)
+        public LoggedInEventArgs(IQueuer queuer, string motd, string[] gameModes)
         {
             Queuer = queuer;
-            Message = message;
+            Motd = motd;
+            GameModes = gameModes;
         }
     }
 }

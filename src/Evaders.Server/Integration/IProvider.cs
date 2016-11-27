@@ -1,4 +1,4 @@
-﻿namespace Evaders.Services
+﻿namespace Evaders.Server.Integration
 {
     using JetBrains.Annotations;
 

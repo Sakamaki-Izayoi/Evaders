@@ -16,16 +16,17 @@
             Connection = new Connection(Guid.NewGuid(), "nin0", address, port, new ConsoleLogger("console", (m, lvl) => lvl >= LogLevel.Information, true));
             Connection.OnLoggedIn += (sender, args) =>
             {
-                Console.WriteLine("SERVER: " + args.Message);
-                ContextManager.Add(new MainContext(ContextManager, args.Queuer));
+                Console.WriteLine("SERVER: " + args.Motd);
+                Console.WriteLine($"SERVER: Available game modes: {string.Join("|", args.GameModes)}");
+                ContextManager.Add(new MainContext(ContextManager, args.Queuer, args.GameModes));
             };
             Connection.OnIllegalAction += (sender, s) => Console.WriteLine("ILLEGAL: " + s.Message);
-            Connection.OnKicked += (sender, s) =>
-            {
-                Console.WriteLine("KICKED: " + s.Message);
-                Debugger.Break();
-                Environment.Exit(0);
-            };
+            //Connection.OnKicked += (sender, s) =>
+            //{
+            //    Console.WriteLine("KICKED: " + s.Message);
+            //    Debugger.Break();
+            //    Environment.Exit(0);
+            //};
         }
 
 

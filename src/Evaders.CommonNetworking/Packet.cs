@@ -21,7 +21,7 @@
         [JsonConverter(typeof (StringEnumConverter))]
         public enum PacketTypeS2C
         {
-            AuthState,
+            AuthResult,
             GameAction,
             IllegalAction,
             NextRound,

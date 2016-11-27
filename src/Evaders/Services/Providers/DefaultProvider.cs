@@ -2,6 +2,7 @@
 {
     using System;
     using JetBrains.Annotations;
+    using Server.Integration;
 
     [UsedImplicitly]
     public class DefaultProvider<TCreationType> : IProvider<TCreationType>

@@ -44,9 +44,12 @@
     <Compile Include="Extensions\UserExtensions.cs" />
     <Compile Include="Extensions\UserStatisticsExtensions.cs" />
     <Compile Include="IMatchmaking.cs" />
+    <Compile Include="Integration\IFactory.cs" />
+    <Compile Include="Integration\IProvider.cs" />
+    <Compile Include="Integration\IProviderFactory.cs" />
     <Compile Include="IRulesProvider.cs" />
     <Compile Include="IServer.cs" />
-    <Compile Include="IServerSupervisor.cs" />
+    <Compile Include="Integration\IServerSupervisor.cs" />
     <Compile Include="IServerUser.cs" />
     <Compile Include="Extensions\LinqExtensions.cs" />
     <Compile Include="IWinStatistics.cs" />
@@ -55,7 +58,7 @@
     <Compile Include="Payloads\GameEnd.cs" />
     <Compile Include="Payloads\GameState.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
-    <Compile Include="ServerConfiguration.cs" />
+    <Compile Include="ServerSettings.cs" />
     <Compile Include="ServerGame.cs" />
     <Compile Include="User.cs" />
   </ItemGroup>

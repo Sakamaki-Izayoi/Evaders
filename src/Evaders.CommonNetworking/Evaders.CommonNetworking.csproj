@@ -40,9 +40,10 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="CommonPayloads\Authorize.cs" />
-    <Compile Include="CommonPayloads\AuthState.cs" />
+    <Compile Include="CommonPayloads\AuthCompleted.cs" />
     <Compile Include="CommonPayloads\IllegalAction.cs" />
     <Compile Include="CommonPayloads\LiveGameAction.cs" />
+    <Compile Include="CommonPayloads\QueueAction.cs" />
     <Compile Include="EasyTaskSocket.cs" />
     <Compile Include="EasySocket.cs" />
     <Compile Include="Packet.cs" />

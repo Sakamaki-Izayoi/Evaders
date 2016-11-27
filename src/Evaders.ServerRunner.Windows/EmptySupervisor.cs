@@ -5,6 +5,7 @@
     using System.Linq;
     using Core.Game;
     using Server;
+    using Server.Integration;
 
     internal class EmptySupervisor : IServerSupervisor
     {

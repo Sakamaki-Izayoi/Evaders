@@ -9,6 +9,8 @@
     using CommonNetworking.CommonPayloads;
     using Core.Game;
     using Extensions;
+    using Integration;
+    using JetBrains.Annotations;
     using Microsoft.Extensions.Logging;
     using Newtonsoft.Json;
     using Payloads;
@@ -17,18 +19,32 @@
     {
         private readonly ILogger _logger;
         private readonly IServer _server;
+        private readonly IServerSupervisor _supervisor;
         private readonly Stopwatch _time = Stopwatch.StartNew();
         private readonly ConcurrentDictionary<IServerUser, bool> _turnEndUsers = new ConcurrentDictionary<IServerUser, bool>();
 
         private readonly object _updateLock = new object();
 
-        [JsonProperty] public readonly long GameIdentifier;
+        [JsonProperty]
+        public readonly long GameIdentifier;
 
         private double _lastFrameSec;
 
-        public ServerGame(IServer server, IEnumerable<IServerUser> users, GameSettings settings, long gameIdentifier, ILogger logger) : base(users, settings)
+        public ServerGame([NotNull] IServer server, [NotNull] IServerSupervisor supervisor, [NotNull] IEnumerable<IServerUser> users, [NotNull] GameSettings settings, long gameIdentifier, [NotNull] ILogger logger) : base(users, settings)
         {
+            if (server == null)
+                throw new ArgumentNullException(nameof(server));
+            if (supervisor == null)
+                throw new ArgumentNullException(nameof(supervisor));
+            if (users == null)
+                throw new ArgumentNullException(nameof(users));
+            if (settings == null)
+                throw new ArgumentNullException(nameof(settings));
+            if (logger == null)
+                throw new ArgumentNullException(nameof(logger));
+
             _server = server;
+            _supervisor = supervisor;
             GameIdentifier = gameIdentifier;
             _logger = logger;
 
@@ -51,7 +67,7 @@
                             foreach (var user in Users.Where(usr => usr.Connected && !IsUserReady(usr)))
                                 //_turnEndUsers[user] = true;
                                 OnIllegalAction(user, $"You took too long for your turn. The longest you may think is: {Settings.MaxTurnTimeSec} sec. You skipped the turn!");
-                                //user.Dispose(); // rip socket
+                            //user.Dispose(); // rip socket
                             NextTurn();
                         }
                     }
@@ -136,12 +152,24 @@
             foreach (var serverUser in Users)
                 serverUser.Send(Packet.PacketTypeS2C.NextRound, GameIdentifier);
             _lastFrameSec = _time.Elapsed.TotalSeconds;
-            _server.HandleGameEndedTurn(this);
+            _supervisor.GameEndedTurn(this);
         }
 
         protected override void OnGameEnd()
         {
             _server.HandleGameEnded(this);
+
+            if (Users.All(usr => !usr.Connected))
+                return;
+
+            var winner = ValidEntities.Any() ? Users.First(usr => usr.Identifier == ValidEntities.First().PlayerIdentifier) : null;
+            foreach (var serverUser in Users)
+                serverUser.Send(Packet.PacketTypeS2C.GameEnd, new GameEnd(GameIdentifier, Users.ToArray(), serverUser.Identifier == winner?.Identifier, winner));
+            if (winner == null)
+                return;
+
+            _supervisor.GameEnded(this, winner.Login, Users.Where(usr => usr.Identifier != winner.Identifier).Select(usr => usr.Login).ToArray());
+
         }
 
         protected override void OnIllegalAction(IServerUser user, string warningMsg)

@@ -6,6 +6,7 @@
     using System.Linq;
     using System.Threading;
     using JetBrains.Annotations;
+    using Server.Integration;
 
     /// <summary>
     ///   Simple thread-safe and generic implementation of <see cref="IFactory{TCreationType,TProviderType}" />.

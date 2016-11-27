@@ -8,9 +8,8 @@
         event EventHandler<GameEventArgs> OnJoinedGame;
         event EventHandler<GameEventArgs> OnLeftGame;
         int CurrentlyRunningGames { get; }
-        int LastServersideQueueCount { get; }
 
-        void EnterQueue(int count = 1);
-        void LeaveQueue(int count = 1);
+        void EnterQueue(string mode, int count = 1);
+        void LeaveQueue(string mode, int count = 1);
     }
 }

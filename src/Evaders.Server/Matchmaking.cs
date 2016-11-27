@@ -4,7 +4,9 @@
     using System.Collections.Generic;
     using System.Diagnostics;
     using System.Linq;
+    using Core.Game;
     using Extensions;
+    using Integration;
     using Microsoft.Extensions.Logging;
 
     public class Matchmaking : IMatchmaking
@@ -12,12 +14,14 @@
         public class MatchCreatedArgs : EventArgs
         {
             public readonly IMatchmaking Source;
+            public readonly string GameMode;
             public readonly IServerUser[] Users;
 
-            public MatchCreatedArgs(IMatchmaking source, params IServerUser[] users)
+            public MatchCreatedArgs(IMatchmaking source, string gameMode, params IServerUser[] users)
             {
                 Users = users;
                 Source = source;
+                GameMode = gameMode;
             }
         }
 
@@ -26,14 +30,15 @@
         private readonly List<IServerUser> _inQueue = new List<IServerUser>();
         private readonly Dictionary<IServerUser, double> _joinedQueueTime = new Dictionary<IServerUser, double>();
         private readonly ILogger _logger;
+        private readonly string _gameMode;
         private readonly float _maxTimeInQueue;
         private readonly IServerSupervisor _supervisor;
         private readonly Stopwatch _time = Stopwatch.StartNew();
-        //private Guid _lastQueuer;
         private double _lastQueuerTime;
 
-        public Matchmaking(float maxTimeInQueue, ILogger logger, IServerSupervisor supervisor)
+        public Matchmaking(string gameMode, float maxTimeInQueue, ILogger logger, IServerSupervisor supervisor)
         {
+            _gameMode = gameMode;
             _maxTimeInQueue = maxTimeInQueue;
             _logger = logger;
             _supervisor = supervisor;
@@ -65,7 +70,7 @@
                         }
 
                         _logger.LogDebug($"{_inQueue[i]} found a match: {bestHoomanBot})");
-                        OnSuggested?.Invoke(this, new MatchCreatedArgs(this, bestHoomanBot, _inQueue[i]));
+                        OnSuggested?.Invoke(this, new MatchCreatedArgs(this, _gameMode, bestHoomanBot, _inQueue[i]));
                     }
                     else
                     {
@@ -79,7 +84,7 @@
                         }
 
                         _logger.LogDebug($"{_inQueue[i]} exceeded max queue time, matching with bot: {bestBotBot})");
-                        OnSuggested?.Invoke(this, new MatchCreatedArgs(this, bestBotBot, _inQueue[i]));
+                        OnSuggested?.Invoke(this, new MatchCreatedArgs(this, _gameMode, bestBotBot, _inQueue[i]));
                     }
                 }
         }
@@ -104,7 +109,7 @@
                 else
                 {
                     _logger.LogDebug($"Found a match (Queue very empty for a longer time, matching with bot: {bestBotBot})");
-                    OnSuggested?.Invoke(this, new MatchCreatedArgs(this, user, bestBotBot));
+                    OnSuggested?.Invoke(this, new MatchCreatedArgs(this, _gameMode, user, bestBotBot));
                     return;
                 }
             }
@@ -118,7 +123,7 @@
             if (autoBestMatch != null)
             {
                 _logger.LogDebug($"Found a match (never played against {autoBestMatch})");
-                OnSuggested?.Invoke(this, new MatchCreatedArgs(this, autoBestMatch, user));
+                OnSuggested?.Invoke(this, new MatchCreatedArgs(this, _gameMode, autoBestMatch, user));
             }
         }
 
