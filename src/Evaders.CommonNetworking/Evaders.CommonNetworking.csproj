@@ -43,9 +43,11 @@
     <Compile Include="CommonPayloads\AuthState.cs" />
     <Compile Include="CommonPayloads\IllegalAction.cs" />
     <Compile Include="CommonPayloads\LiveGameAction.cs" />
+    <Compile Include="EasyTaskSocket.cs" />
     <Compile Include="EasySocket.cs" />
     <Compile Include="Packet.cs" />
     <Compile Include="PacketC2S.cs" />
+    <Compile Include="PacketTaskParser.cs" />
     <Compile Include="PacketParser.cs" />
     <Compile Include="PacketS2C.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />

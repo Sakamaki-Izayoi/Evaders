@@ -1,105 +1,134 @@
 ﻿namespace Evaders.Core.Game
 {
     using System;
+    using System.Collections.Concurrent;
     using System.Collections.Generic;
     using System.Linq;
     using System.Runtime.Serialization;
+    using System.Threading;
     using Newtonsoft.Json;
     using Utility;
 
-    public abstract class Game<TUser, TEntity> : GameBase where TUser : IUser where TEntity : EntityBase
+    public abstract class Game<TUser> : GameBase where TUser : IUser
     {
-        public override double TimePerFrameSec => 1d/Settings.FramesPerSecond;
-        public bool GameEnded => Entities.All(entity => entity.PlayerIdentifier == Entities.FirstOrDefault()?.PlayerIdentifier);
+        public override double TimePerFrameSec => 1d / Settings.FramesPerSecond;
+        public bool GameEnded => _entities.All(entity => entity.Value.PlayerIdentifier == _entities.FirstOrDefault().Value?.PlayerIdentifier);
 
         [JsonProperty]
         public IEnumerable<TUser> Users => _users.Keys;
 
-        public override IReadOnlyList<EntityBase> ValidEntities => Entities;
-        public override IReadOnlyList<Projectile> ValidProjectiles => Projectiles;
-        private readonly long _entityIdentifier;
+        public override IEnumerable<EntityBase> ValidEntities => _entities.Values;
+        public override IEnumerable<Projectile> ValidProjectiles => _projectiles.Values;
+        private long _entityIdentifier;
 
-        private readonly List<TEntity> _toRemoveEntities = new List<TEntity>();
+        private readonly List<Entity> _toRemoveEntities = new List<Entity>();
         private readonly List<Projectile> _toRemoveProjectiles = new List<Projectile>();
-        private readonly Dictionary<TUser, List<GameAction>> _users;
+        private readonly ConcurrentDictionary<TUser, ConcurrentBag<GameAction>> _users;
 
-        [JsonProperty] protected readonly List<TEntity> Entities = new List<TEntity>();
+        [JsonProperty]
+        protected IEnumerable<Entity> Entities => _entities.Values;
 
-        [JsonProperty] protected readonly List<Projectile> Projectiles = new List<Projectile>();
+        [JsonProperty]
+        protected IEnumerable<Projectile> Projectiles => _projectiles.Values;
+
+        private readonly ConcurrentDictionary<long, Entity> _entities = new ConcurrentDictionary<long, Entity>();
+        private readonly ConcurrentDictionary<long, Projectile> _projectiles = new ConcurrentDictionary<long, Projectile>();
 
         private long _projectileIdentifier;
+        protected readonly object NextTurnLock = new object();
 
-        public Game(IEnumerable<TUser> users, GameSettings settings, IEntityFactory<TEntity> entityFactory) : base(settings)
+
+        protected Game(IEnumerable<TUser> users, GameSettings settings, IEnumerable<Entity> entities, IEnumerable<Projectile> projectiles) : base(settings)
         {
-            _users = users.ToDictionary(item => item, item => new List<GameAction>());
+            _users = new ConcurrentDictionary<TUser, ConcurrentBag<GameAction>>(users.Select(item => new KeyValuePair<TUser, ConcurrentBag<GameAction>>(item, new ConcurrentBag<GameAction>())));
+            _entities = new ConcurrentDictionary<long, Entity>(entities.Select(item => new KeyValuePair<long, Entity>(item.EntityIdentifier, item)));
+            _projectiles = new ConcurrentDictionary<long, Projectile>(projectiles.Select(item => new KeyValuePair<long, Projectile>(item.ProjectileIdentifier, item)));
+        }
 
+        protected Game(IEnumerable<TUser> users, GameSettings settings) : base(settings)
+        {
+            _users = new ConcurrentDictionary<TUser, ConcurrentBag<GameAction>>(users.Select(item => new KeyValuePair<TUser, ConcurrentBag<GameAction>>(item, new ConcurrentBag<GameAction>())));
             var unitUp = new Vector2(0, -1);
-            var rotateBy = 360f/_users.Count;
+            var rotateBy = 360f / _users.Count;
             foreach (var user in _users)
             {
-                Entities.Add(entityFactory.Create(Settings.DefaultCharacterData, unitUp*(Settings.ArenaRadius - Settings.DefaultCharacterData.HitboxSize), user.Key.Identifier, _entityIdentifier++, this)); // new Entity<TUser>(Settings.DefaultCharacterData, unitUp * (Settings.ArenaRadius - Settings.DefaultCharacterData.HitboxSize), user.Key.Identifier, _entityIdentifier++, this));
+                var entityIdentifier = ++_entityIdentifier;
+                _entities.TryAdd(entityIdentifier, new Entity(Settings.DefaultCharacterData, unitUp * (Settings.ArenaRadius - Settings.DefaultCharacterData.HitboxSize), user.Key.Identifier, entityIdentifier, this));
                 unitUp = unitUp.RotatedDegrees(rotateBy);
             }
         }
 
         protected void NextTurn()
         {
-            foreach (var user in _users)
-                foreach (var gameAction in user.Value.OrderByDescending(item => item.Type))
+            lock (NextTurnLock)
+            {
+                foreach (var user in _users)
                 {
-                    var controlledEntity = Entities.FirstOrDefault(item => item.EntityIdentifier == gameAction.ControlledEntityIdentifier);
-                    if (controlledEntity == null)
+                    while (!user.Value.IsEmpty)
                     {
-                        OnIllegalAction(user.Key, "You are controlling a not existing entity: " + gameAction.ControlledEntityIdentifier);
-                        continue;
-                    }
-                    if (controlledEntity.PlayerIdentifier != user.Key.Identifier)
-                    {
-                        OnIllegalAction(user.Key, "You cannot control an enemy untit :)");
-                        continue;
-                    }
-
-                    bool result;
-                    switch (gameAction.Type)
-                    {
-                        case GameActionType.Move:
-                            result = controlledEntity.MoveToInternal(gameAction.Position);
-                            break;
-                        case GameActionType.Shoot:
-                            result = controlledEntity.ShootInternal(gameAction.Position);
-                            break;
-                        default:
-                            OnIllegalAction(user.Key, "Unknown Action: " + (int) gameAction.Type);
+                        GameAction gameAction;
+                        if (!user.Value.TryTake(out gameAction))
                             continue;
+
+                        Entity controlledEntity;
+                        if (!_entities.TryGetValue(gameAction.ControlledEntityIdentifier, out controlledEntity))
+                        {
+                            OnIllegalAction(user.Key, "You are controlling a not existing entity: " + gameAction.ControlledEntityIdentifier);
+                            continue;
+                        }
+                        if (controlledEntity.PlayerIdentifier != user.Key.Identifier)
+                        {
+                            OnIllegalAction(user.Key, "You cannot control an enemy untit :)");
+                            continue;
+                        }
+
+                        bool result;
+                        switch (gameAction.Type)
+                        {
+                            case GameActionType.Move:
+                                result = controlledEntity.MoveToInternal(gameAction.Position);
+                                break;
+                            case GameActionType.Shoot:
+                                result = controlledEntity.ShootInternal(gameAction.Position);
+                                break;
+                            default:
+                                OnIllegalAction(user.Key, "Unknown Action: " + (int)gameAction.Type);
+                                continue;
+                        }
+                        if (!result)
+                            OnIllegalAction(user.Key, "Illegal action: " + gameAction);
+                        else
+                            OnActionExecuted(user.Key, gameAction);
                     }
-                    if (!result)
-                        OnIllegalAction(user.Key, "Illegal action: " + gameAction);
-                    else
-                        OnActionExecuted(user.Key, gameAction);
                 }
 
+                foreach (var entity in _entities)
+                    entity.Value.Update();
 
-            foreach (var entity in Entities)
-                entity.Update();
+                foreach (var projectile in _projectiles)
+                    projectile.Value.Update();
 
-            foreach (var projectile in Projectiles)
-                projectile.Update();
+                foreach (var removeEntity in _toRemoveEntities)
+                {
+                    Entity removed;
+                    _entities.TryRemove(removeEntity.EntityIdentifier, out removed);
+                }
+                _toRemoveEntities.Clear();
 
-            foreach (var removeEntity in _toRemoveEntities)
-                Entities.Remove(removeEntity);
+                foreach (var removeProjectile in _toRemoveProjectiles)
+                {
+                    Projectile removed;
+                    _projectiles.TryRemove(removeProjectile.ProjectileIdentifier, out removed);
+                }
+                _toRemoveProjectiles.Clear();
 
-            foreach (var removeProjectile in _toRemoveProjectiles)
-                Projectiles.Remove(removeProjectile);
+                Turn++;
 
-            foreach (var keyValuePair in _users)
-                keyValuePair.Value.Clear();
-
-            Turn++;
-
-            if (GameEnded)
-                OnGameEnd();
-            else
-                OnTurnEnded();
+                if (GameEnded)
+                    OnGameEnd();
+                else
+                    OnTurnEnded();
+            }
         }
 
         /// <summary>
@@ -109,7 +138,8 @@
         /// <param name="action"></param>
         protected void AddActionInternal(TUser from, GameAction action)
         {
-            _users[from].Add(action);
+            lock (NextTurnLock)
+                _users[from].Add(action);
         }
 
         /// <summary>
@@ -138,14 +168,27 @@
 
         protected internal override void SpawnProjectile(Vector2 direction, EntityBase entity)
         {
-            Projectiles.Add(new Projectile(direction.Unit, entity, this, _projectileIdentifier++, Turn + (int) Math.Ceiling(Settings.ProjectileLifeTimeSec/TimePerFrameSec)));
+            var projectileIdentifier = ++_projectileIdentifier;
+            if (!_projectiles.TryAdd(projectileIdentifier, new Projectile(direction.Unit, entity, this, projectileIdentifier, Turn + (int)Math.Ceiling(Settings.ProjectileLifeTimeSec / TimePerFrameSec))))
+            {
+                throw new Exception("Could not spawn projectile with id: " + projectileIdentifier);
+            }
+        }
+
+        protected void SpawnEntity(Vector2 position, long playerIdentifier, CharacterData charData)
+        {
+            var entityIdentifier = ++_entityIdentifier;
+            if (!_entities.TryAdd(entityIdentifier, new Entity(charData, position, playerIdentifier, entityIdentifier, this)))
+            {
+                throw new Exception("Could not spawn entity with id: " + entityIdentifier);
+            }
         }
 
         internal TUser GetUser(long userIdentifier) => _users.Keys.FirstOrDefault(item => item.Identifier == userIdentifier);
 
         protected internal override void HandleDeath(EntityBase entity)
         {
-            _toRemoveEntities.Add((TEntity) entity);
+            _toRemoveEntities.Add((Entity)entity);
         }
 
         protected internal override void HandleDeath(Projectile projectile)
@@ -156,19 +199,22 @@
         [OnDeserialized]
         private void ValidateReferences(StreamingContext context)
         {
-            foreach (var entity in Entities)
-                entity.Game = this;
-            foreach (var projectile in Projectiles)
-                projectile.Game = this;
+            lock (NextTurnLock)
+            {
+                foreach (var entity in _entities)
+                    entity.Value.Game = this;
+                foreach (var projectile in _projectiles)
+                    projectile.Value.Game = this;
+            }
         }
 
         public bool HasUser(TUser user) => _users.ContainsKey(user);
 
-        protected abstract void OnActionExecuted(TUser @from, GameAction action);
+        protected virtual void OnActionExecuted(TUser @from, GameAction action) { }
 
-        protected abstract void OnTurnEnded();
+        protected virtual void OnTurnEnded() { }
 
-        protected abstract void OnGameEnd();
+        protected virtual void OnGameEnd() { }
 
         protected abstract void OnIllegalAction(TUser user, string warningMsg);
 

@@ -6,8 +6,8 @@
 
     public class EntityBase
     {
-        public bool CanShoot => (Game.Turn - LastShotFrame)*Game.TimePerFrameSec >= CharData.ReloadDelaySec;
-        public int ReloadFrames => (int) Math.Ceiling(CharData.ReloadDelaySec/Game.TimePerFrameSec);
+        public bool CanShoot => (Game.Turn - LastShotFrame) * Game.TimePerFrameSec >= CharData.ReloadDelaySec;
+        public int ReloadFrames => (int)Math.Ceiling(CharData.ReloadDelaySec / Game.TimePerFrameSec);
 
         [JsonProperty]
         public int Health { get; private set; }
@@ -26,14 +26,16 @@
         [JsonProperty]
         public Vector2 MovingTo { get; private set; }
 
-        public double MovingDistancePerTurn => CharData.SpeedSec*Game.TimePerFrameSec;
+        public double MovingDistancePerTurn => CharData.SpeedSec * Game.TimePerFrameSec;
         public Vector2 PositionNextTurn => GetPositionIn(1);
 
-        [JsonProperty] public CharacterData CharData;
+        [JsonProperty]
+        public readonly CharacterData CharData;
 
         internal GameBase Game;
 
-        [JsonProperty] internal int LastShotFrame = short.MinValue;
+        [JsonProperty]
+        internal int LastShotFrame = short.MinValue;
 
         public EntityBase(CharacterData charData, Vector2 position, long playerIdentifier, long entityIdentifier, GameBase game)
         {
@@ -66,10 +68,10 @@
 
         public void Update()
         {
-            if ((Position - MovingTo).LengthSqr < CharData.SpeedSec*Game.TimePerFrameSec*CharData.SpeedSec*Game.TimePerFrameSec)
+            if ((Position - MovingTo).LengthSqr < CharData.SpeedSec * Game.TimePerFrameSec * CharData.SpeedSec * Game.TimePerFrameSec)
                 Position = MovingTo;
             else
-                Position = Position.Extended(MovingTo, CharData.SpeedSec*Game.TimePerFrameSec);
+                Position = Position.Extended(MovingTo, CharData.SpeedSec * Game.TimePerFrameSec);
         }
 
         /// <summary>
@@ -79,8 +81,8 @@
         /// <returns></returns>
         public int GetNeededProjectileTurns(Vector2 position)
         {
-            var sec = position.Distance(Position.Extended(position, HitboxSize + CharData.ProjectileHitboxSize), true)/(CharData.ProjectileSpeedSec*CharData.ProjectileSpeedSec);
-            return (int) Math.Ceiling(sec/Game.TimePerFrameSec);
+            var sec = position.Distance(Position.Extended(position, HitboxSize + CharData.ProjectileHitboxSize), true) / (CharData.ProjectileSpeedSec * CharData.ProjectileSpeedSec);
+            return (int)Math.Ceiling(sec / Game.TimePerFrameSec);
         }
 
         internal bool MoveToInternal(Vector2 coord)
@@ -109,8 +111,8 @@
 
         public Vector2 GetPositionIn(uint turns, Vector2 movingTo)
         {
-            var distance = MovingDistancePerTurn*turns;
-            return movingTo.Distance(Position, true) <= distance*distance ? movingTo : Position.Extended(movingTo, distance);
+            var distance = MovingDistancePerTurn * turns;
+            return movingTo.Distance(Position, true) <= distance * distance ? movingTo : Position.Extended(movingTo, distance);
         }
     }
 }

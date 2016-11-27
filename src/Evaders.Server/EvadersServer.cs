@@ -1,10 +1,12 @@
 ﻿namespace Evaders.Server
 {
     using System;
+    using System.Collections.Concurrent;
     using System.Collections.Generic;
     using System.Linq;
     using System.Net;
     using System.Net.Sockets;
+    using System.Threading;
     using CommonNetworking;
     using CommonNetworking.CommonPayloads;
     using Core.Utility;
@@ -14,14 +16,13 @@
     public class EvadersServer : IServer, IRulesProvider
     {
         public int MaxUsernameLength => _config.MaxUsernameLength;
-        public IEnumerable<IServerUser> ConnectedUsers => _connectedUsers;
+        public bool ServerListening => _serverSocket.IsBound && !_serverSocket.Stopped;
         private readonly ServerConfiguration _config;
-        private readonly List<IServerUser> _connectedUsers = new List<IServerUser>();
-        private readonly List<long> _endedGamesThisFrame = new List<long>();
+        private readonly ConcurrentDictionary<IServerUser, DateTime> _connectedUsers = new ConcurrentDictionary<IServerUser, DateTime>();
         private readonly ILogger _logger;
         private readonly IMatchmaking _matchmaking;
-        private readonly Dictionary<long, ServerGame> _runningGames = new Dictionary<long, ServerGame>();
-        private readonly EasySocket _serverSocket;
+        private readonly ConcurrentDictionary<long, ServerGame> _runningGames = new ConcurrentDictionary<long, ServerGame>();
+        private readonly EasyTaskSocket _serverSocket;
         private readonly IServerSupervisor _supervisor;
         private long _gameIdentifier;
         private long _userIdentifier;
@@ -42,62 +43,79 @@
             logger.LogInformation("Setting up tcp accept socket");
             var listener = new TcpListener(IPAddress.Parse(config.IP), config.Port);
             listener.Start();
-            _serverSocket = new EasySocket(listener.Server);
+            _serverSocket = new EasyTaskSocket(listener.Server);
             _serverSocket.OnAccepted += OnClientConnected;
-            if (!_serverSocket.StartJobs(EasySocket.SocketTasks.Accept))
+            if (!_serverSocket.StartJobs(EasyTaskSocket.SocketTasks.Accept))
                 throw new Exception("Could not start network jobs");
             logger.LogInformation("Server online!");
         }
 
         void IServer.HandleUserAction(IServerUser @from, LiveGameAction action)
         {
-            if (!_runningGames.ContainsKey(action.GameIdentifier))
+            ServerGame game;
+            if (!_runningGames.TryGetValue(action.GameIdentifier, out game))
             {
                 @from.IllegalAction("You cannot take action in a game you don't even play in!");
                 return;
             }
 
-            _runningGames[action.GameIdentifier].AddGameAction(from, action);
+            game.AddGameAction(from, action);
         }
 
 
+        public bool WouldAuthCollide(Guid login, IServerUser connectingUser, out IServerUser existingUser)
+        {
+            lock (_connectedUsers)
+            {
+                existingUser = _connectedUsers.FirstOrDefault(item => item.Key.Login == login && item.Key != connectingUser).Key;
+                return existingUser != null;
+            }
+        }
+
         public long GenerateUniqueUserIdentifier()
         {
-            return _userIdentifier++;
+            return Interlocked.Increment(ref _userIdentifier);
         }
 
         void IServer.HandleUserEndTurn(IServerUser user, long gameIdentifier)
         {
-            if (!_runningGames.ContainsKey(gameIdentifier))
+            ServerGame game;
+            if (!_runningGames.TryGetValue(gameIdentifier, out game))
             {
                 user.IllegalAction("You can't end your turn in a game you don't even play in: " + gameIdentifier);
                 return;
             }
-            _runningGames[gameIdentifier].UserRequestsEndTurn(user);
+            game.UserRequestsEndTurn(user);
         }
 
         void IServer.HandleUserEnterQueue(IServerUser user, int count)
         {
-            var regCount = _matchmaking.GetRegisterCount(user);
-            if (regCount >= _config.MaxQueueCount)
+            lock (_matchmaking)
             {
-                user.IllegalAction("Exceeded max queue count: " + _config.MaxQueueCount);
-                return;
+                var regCount = _matchmaking.GetRegisterCount(user);
+                if (regCount >= _config.MaxQueueCount)
+                {
+                    user.IllegalAction("Exceeded max queue count: " + _config.MaxQueueCount);
+                    return;
+                }
+
+                var queueLimitExclusive = Math.Min(_config.MaxQueueCount, regCount + count);
+                for (; regCount < queueLimitExclusive; regCount++)
+                    _matchmaking.EnterQueue(user);
+
+                user.Send(Packet.PacketTypeS2C.QueueState, regCount);
             }
-
-            var queueLimitExclusive = Math.Min(_config.MaxQueueCount, regCount + count);
-            for (; regCount < queueLimitExclusive; regCount++)
-                _matchmaking.EnterQueue(user);
-
-            user.Send(Packet.PacketTypeS2C.QueueState, regCount);
         }
 
         void IServer.HandleUserLeaveQueue(IServerUser user, int count)
         {
-            for (var i = 0; i < count; i++)
-                _matchmaking.LeaveQueue(user);
+            lock (_matchmaking)
+            {
+                for (var i = 0; i < count; i++)
+                    _matchmaking.LeaveQueue(user);
 
-            user.Send(Packet.PacketTypeS2C.QueueState, _matchmaking.GetRegisterCount(user));
+                user.Send(Packet.PacketTypeS2C.QueueState, _matchmaking.GetRegisterCount(user));
+            }
         }
 
         void IServer.HandleUserReconnect(IServerUser user)
@@ -108,20 +126,28 @@
 
         void IServer.HandleUserResync(IServerUser user, long gameIdentifier)
         {
-            if (!_runningGames.ContainsKey(gameIdentifier))
+            ServerGame game;
+            if (!_runningGames.TryGetValue(gameIdentifier, out game))
             {
                 _logger.LogWarning($"User tried resyncing in an unknown game: {gameIdentifier}");
                 user.IllegalAction($"Cannot resync in game: {gameIdentifier}, because it does not exist!");
                 return;
             }
-            _runningGames[gameIdentifier].HandleReconnect(user);
+            game.HandleReconnect(user);
         }
 
         void IServer.Kick(IServerUser user)
         {
-            _connectedUsers.Remove(user);
+            DateTime connectedTime;
+            lock (_connectedUsers)
+            {
+                _connectedUsers.TryRemove(user, out connectedTime);
+            }
             if (user.Connected)
                 user.Dispose();
+
+            _logger.LogDebug($"Kicking user: {user}, who connected {connectedTime}");
+
             // Todo: instead of letting running games wait for the timeout, kick the user and his entities out right away
         }
 
@@ -132,7 +158,12 @@
 
         void IServer.HandleGameEnded(ServerGame serverGame)
         {
-            _endedGamesThisFrame.Add(serverGame.GameIdentifier);
+            ServerGame game;
+            if (!_runningGames.TryRemove(serverGame.GameIdentifier, out game))
+            {
+                return;
+            }
+
             if (serverGame.Users.All(usr => !usr.Connected))
                 return;
 
@@ -152,53 +183,32 @@
 
         private void OnClientConnected(object sender, SocketAsyncEventArgs socketAsyncEventArgs)
         {
-            _connectedUsers.Add(new User(socketAsyncEventArgs.AcceptSocket, _logger, this, this));
+            lock (_connectedUsers)
+            {
+                _connectedUsers.TryAdd(new User(socketAsyncEventArgs.AcceptSocket, _logger, this, this), DateTime.Now);
+            }
         }
 
         public void Update()
         {
-            _serverSocket.Work();
-            for (var index = 0; index < _connectedUsers.Count; index++)
-            {
-                var connectedUser = _connectedUsers[index];
-                try
-                {
-                    connectedUser.Update();
-                }
-                catch (Exception exception)
-                {
-                    if (!connectedUser.Disposed)
-                    {
-                        _logger.LogWarning($"Kicking user due to exception: {exception}");
-                        connectedUser.Dispose();
-                    }
-                    else
-                        _logger.LogDebug($"Removing disconnected user: {connectedUser}");
-
-                    _connectedUsers.Remove(connectedUser);
-                    index--;
-                }
-            }
             foreach (var keyValuePair in _runningGames)
                 keyValuePair.Value.Update();
-            while (_endedGamesThisFrame.Count > 0)
-            {
-                _runningGames.Remove(_endedGamesThisFrame[0]);
-                _endedGamesThisFrame.RemoveAt(0);
-            }
         }
 
         private void OnMatchmakingFoundMatchup(object sender, Matchmaking.MatchCreatedArgs matchCreatedArgs)
         {
-            _gameIdentifier++;
-
-            var game = new ServerGame(this, matchCreatedArgs.Users, _config.GameSettings, _gameIdentifier, _logger);
-            foreach (var serverUser in matchCreatedArgs.Users)
+            lock (_runningGames)
             {
-                matchCreatedArgs.Source.LeaveQueue(serverUser);
-                game.HandleReconnect(serverUser);
+                _gameIdentifier++;
+
+                var game = new ServerGame(this, matchCreatedArgs.Users, _config.GameSettings, _gameIdentifier, _logger);
+                foreach (var serverUser in matchCreatedArgs.Users)
+                {
+                    matchCreatedArgs.Source.LeaveQueue(serverUser);
+                    game.HandleReconnect(serverUser);
+                }
+                _runningGames.TryAdd(_gameIdentifier, game);
             }
-            _runningGames.Add(_gameIdentifier, game);
         }
     }
 }

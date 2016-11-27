@@ -8,12 +8,12 @@
     using Extensions;
     using Newtonsoft.Json;
 
-    public class ClientGame : Game<ClientUser, ControllableEntity>
+    public class ClientGame : Game<ClientUser>
     {
         public event Action OnGameEnded;
         public event EventHandler<MessageEventArgs> OnServerRejectedAction;
         public event EventHandler<GameEventArgs> OnWaitingForActions;
-        public IEnumerable<ControllableEntity> MyEntities => Entities.Where(entity => entity.PlayerIdentifier == _myPlayerIdentifier);
+        public IEnumerable<Entity> MyEntities => Entities.Where(entity => entity.PlayerIdentifier == _myPlayerIdentifier);
         public IEnumerable<EntityBase> EnemyEntities => Entities.Where(entity => entity.PlayerIdentifier != _myPlayerIdentifier);
         public IEnumerable<Projectile> EnemyProjectiles => ValidProjectiles.Where(projectile => projectile.PlayerIdentifier != _myPlayerIdentifier);
         public IEnumerable<Projectile> MyProjectiles => ValidProjectiles.Where(projectile => projectile.PlayerIdentifier == _myPlayerIdentifier);
@@ -21,7 +21,7 @@
         private Connection _connection;
         private long _myPlayerIdentifier;
 
-        internal ClientGame(IEnumerable<ClientUser> users, GameSettings settings, Connection connection, long myPlayerIdentifier, long gameIdentifier) : base(users, settings, new ControllableEntityFactory())
+        internal ClientGame(IEnumerable<ClientUser> users, GameSettings settings, Connection connection, long myPlayerIdentifier, long gameIdentifier) : base(users, settings)
         {
             _connection = connection;
             _myPlayerIdentifier = myPlayerIdentifier;
@@ -29,10 +29,8 @@
         }
 
         [JsonConstructor]
-        private ClientGame(IEnumerable<ClientUser> users, GameSettings settings, IEnumerable<ControllableEntity> entities) : base(users, settings, new ControllableEntityFactory())
+        private ClientGame(IEnumerable<ClientUser> users, GameSettings settings, IEnumerable<Entity> entities, IEnumerable<Projectile> projectiles) : base(users, settings, entities, projectiles)
         {
-            Entities.Clear();
-            Entities.AddRange(entities);
         }
 
         internal void SetGameDetails(long myPlayerIdentifier, long gameIdentifier, Connection connection)

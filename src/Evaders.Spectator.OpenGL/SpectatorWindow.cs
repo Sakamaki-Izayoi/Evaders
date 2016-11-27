@@ -1,4 +1,4 @@
-﻿namespace Evaders.Spectator
+﻿namespace Evaders.Spectator.OpenGL
 {
     using System;
     using System.Collections.Generic;

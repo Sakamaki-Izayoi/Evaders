@@ -6,8 +6,8 @@
 
     public abstract class GameBase
     {
-        public abstract IReadOnlyList<EntityBase> ValidEntities { get; }
-        public abstract IReadOnlyList<Projectile> ValidProjectiles { get; }
+        public abstract IEnumerable<EntityBase> ValidEntities { get; }
+        public abstract IEnumerable<Projectile> ValidProjectiles { get; }
         public abstract double TimePerFrameSec { get; }
 
         [JsonProperty]

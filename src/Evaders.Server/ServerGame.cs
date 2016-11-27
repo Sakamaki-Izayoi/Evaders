@@ -1,5 +1,7 @@
 ﻿namespace Evaders.Server
 {
+    using System;
+    using System.Collections.Concurrent;
     using System.Collections.Generic;
     using System.Diagnostics;
     using System.Linq;
@@ -17,9 +19,12 @@
         private readonly ILogger _logger;
         private readonly IServer _server;
         private readonly Stopwatch _time = Stopwatch.StartNew();
-        private readonly HashSet<IServerUser> _turnEndUsers = new HashSet<IServerUser>();
+        private readonly ConcurrentDictionary<IServerUser, bool> _turnEndUsers = new ConcurrentDictionary<IServerUser, bool>();
 
-        [JsonProperty] public readonly long GameIdentifier;
+        [JsonProperty]
+        public readonly long GameIdentifier;
+
+        private readonly object _updateLock = new object();
 
         private double _lastFrameSec;
 
@@ -28,53 +33,81 @@
             _server = server;
             GameIdentifier = gameIdentifier;
             _logger = logger;
+
+            InitTurnEndStates();
         }
 
         public void Update()
         {
-            var time = _time.Elapsed.TotalSeconds;
-            var elapsed = time - _lastFrameSec;
-
-            if (elapsed > Settings.MaxFrameTimeSec)
+            lock (_updateLock)
             {
-                _logger.LogTrace($"Forcing advancement of game {GameIdentifier}");
-                foreach (var user in Users.Where(usr => usr.Connected && !_turnEndUsers.Contains(usr)))
+                var time = _time.Elapsed.TotalSeconds;
+                var elapsed = time - _lastFrameSec;
+
+                if (elapsed > Settings.MaxFrameTimeSec)
                 {
-                    _turnEndUsers.Add(user);
-                    OnIllegalAction(user, $"You took too long for your turn. The longest you may think is: {Settings.MaxFrameTimeSec} sec. You skipped the turn!");
-                    //user.Dispose(); // rip socket
+                    lock (NextTurnLock)
+                    {
+                        if (elapsed > Settings.MaxFrameTimeSec)
+                        {
+                            _logger.LogTrace($"Forcing advancement of game {GameIdentifier}");
+                            foreach (var user in Users.Where(usr => usr.Connected && !IsUserReady(usr)))
+                            {
+                                //_turnEndUsers[user] = true;
+                                OnIllegalAction(user, $"You took too long for your turn. The longest you may think is: {Settings.MaxFrameTimeSec} sec. You skipped the turn!");
+                                //user.Dispose(); // rip socket
+                            }
+                            NextTurn();
+                        }
+                    }
                 }
-                PossibleEndTurn();
             }
         }
 
         public void UserRequestsEndTurn(IServerUser @from)
         {
-            if (_turnEndUsers.Contains(from))
+            lock (NextTurnLock) // must not process the request during a nextturn
             {
-                OnIllegalAction(from, "Please wait for others to get ready. No need to spam! In fact, it could cost you a turn :) (Stop spamming EndTurn)");
-                return;
+                if (IsUserReady(from))
+                {
+                    OnIllegalAction(from, "Please wait for others to get ready. No need to spam! In fact, it could cost you a turn :) (Stop spamming EndTurn)");
+                    return;
+                }
+                if (!HasUser(@from))
+                {
+                    OnIllegalAction(from, "You can't end your turn in a game you don't even play in");
+                    return;
+                }
+                _turnEndUsers[@from] = true;
             }
-            if (!HasUser(@from))
-            {
-                OnIllegalAction(from, "You can't end your turn in a game you don't even play in");
-                return;
-            }
-            _turnEndUsers.Add(@from);
 
-            PossibleEndTurn();
+
+            PossibleEndTurn(); // This is not inside the lock on purpose (deadlock)
+        }
+
+        private bool IsUserReady(IServerUser user)
+        {
+            bool ready;
+            if (!_turnEndUsers.TryGetValue(user, out ready))
+            {
+                throw new Exception("Turn-end user dictionary invalid");
+            }
+            return ready;
         }
 
         private void PossibleEndTurn()
         {
-            if (Users.Where(usr => usr.Connected).All(usr => _turnEndUsers.Contains(usr)))
+            lock (NextTurnLock) // Need to apply the next turn lock or it will meet the next turn requirement while nextturn is executed, causing it to call nextturn too often
             {
-                if (Users.All(usr => !usr.Connected))
+                if (Users.Where(usr => usr.Connected).All(IsUserReady))
                 {
-                    OnGameEnd();
-                    return;
+                    if (Users.All(usr => !usr.Connected))
+                    {
+                        OnGameEnd();
+                        return;
+                    }
+                    NextTurn();
                 }
-                NextTurn();
             }
         }
 
@@ -149,7 +182,8 @@
         public void HandleReconnect(IServerUser user)
         {
             if (HasUser(user))
-                user.Send(Packet.PacketTypeS2C.GameState, new GameState(GameIdentifier, this, user.Identifier));
+                lock (NextTurnLock)
+                    user.Send(Packet.PacketTypeS2C.GameState, new GameState(GameIdentifier, this, user.Identifier));
         }
 
         protected override void OnActionExecuted(IServerUser @from, GameAction action)
@@ -158,9 +192,15 @@
                 serverUser.Send(Packet.PacketTypeS2C.GameAction, action.AsLiveAction(GameIdentifier));
         }
 
+        private void InitTurnEndStates()
+        {
+            foreach (var usr in Users)
+                _turnEndUsers[usr] = false;
+        }
+
         protected override void OnTurnEnded()
         {
-            _turnEndUsers.Clear();
+            InitTurnEndStates();
             foreach (var user in Users.Where(user => user.FullGameState))
                 user.Send(Packet.PacketTypeS2C.GameState, new GameState(GameIdentifier, this, user.Identifier));
             foreach (var serverUser in Users)
@@ -181,7 +221,7 @@
 
         protected override bool BeforeHandleAction(IServerUser @from, GameAction action)
         {
-            if (_turnEndUsers.Contains(from))
+            if (IsUserReady(from))
             {
                 OnIllegalAction(from, "Please wait for others to get ready. No need to spam! In fact, it could cost you a turn :)");
                 return false;

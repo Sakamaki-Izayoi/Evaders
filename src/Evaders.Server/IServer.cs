@@ -1,11 +1,12 @@
 ﻿namespace Evaders.Server
 {
+    using System;
     using System.Collections.Generic;
     using CommonNetworking.CommonPayloads;
 
     internal interface IServer
     {
-        IEnumerable<IServerUser> ConnectedUsers { get; }
+        bool WouldAuthCollide(Guid login, IServerUser connectingUser, out IServerUser existingUser);
         long GenerateUniqueUserIdentifier();
         void HandleUserAction(IServerUser @from, LiveGameAction action);
         void HandleUserEndTurn(IServerUser user, long gameIdentifier);

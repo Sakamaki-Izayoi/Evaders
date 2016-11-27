@@ -4,11 +4,12 @@
     using System.Collections.Concurrent;
     using System.Net;
     using System.Net.Sockets;
+    using System.Threading.Tasks;
 
     /// <summary>
     ///     Queues results of async operations, and fires events in the thread that calls Work() later
     /// </summary>
-    public class EasySocket : IDisposable
+    public class EasyTaskSocket : IDisposable
     {
         [Flags]
         public enum SocketTasks
@@ -49,20 +50,12 @@
         public bool WasStarted { get; private set; }
         public bool Stopped { get; private set; }
 
-        public bool HasWork => !(_acceptedSockets.IsEmpty && _receivedData.IsEmpty && _receivedFromData.IsEmpty && _receivedMessageFromData.IsEmpty);
-
-
-        private readonly ConcurrentQueue<SocketAsyncEventArgs> _acceptedSockets = new ConcurrentQueue<SocketAsyncEventArgs>();
         private readonly ConcurrentBag<byte[]> _bufferPool = new ConcurrentBag<byte[]>();
-        private readonly ConcurrentQueue<SocketAsyncEventArgs> _receivedData = new ConcurrentQueue<SocketAsyncEventArgs>();
-        private readonly ConcurrentQueue<SocketAsyncEventArgs> _receivedFromData = new ConcurrentQueue<SocketAsyncEventArgs>();
-        private readonly ConcurrentQueue<SocketAsyncEventArgs> _receivedMessageFromData = new ConcurrentQueue<SocketAsyncEventArgs>();
-        private readonly ConcurrentQueue<SocketAsyncEventArgs> _sendComplete = new ConcurrentQueue<SocketAsyncEventArgs>();
-        private readonly ConcurrentQueue<SocketAsyncEventArgs> _sendToComplete = new ConcurrentQueue<SocketAsyncEventArgs>();
+
         public readonly Socket Socket;
         private uint _bufferSize = ushort.MaxValue;
 
-        public EasySocket(Socket socket)
+        public EasyTaskSocket(Socket socket)
         {
             Socket = socket;
         }
@@ -99,39 +92,6 @@
             Stopped = true;
         }
 
-        /// <summary>
-        ///     Will fire all events according to the queued messages
-        /// </summary>
-        public void Work()
-        {
-            if (Stopped)
-                throw new InvalidOperationException($"{nameof(EasySocket)} was stopped");
-            SocketAsyncEventArgs result;
-
-            while (!_acceptedSockets.IsEmpty)
-                if (_acceptedSockets.TryDequeue(out result))
-                    OnAccepted?.Invoke(Socket, result);
-
-            while (!_receivedData.IsEmpty)
-                if (_receivedData.TryDequeue(out result))
-                    OnReceived?.Invoke(Socket, result);
-
-            while (!_receivedFromData.IsEmpty)
-                if (_receivedFromData.TryDequeue(out result))
-                    OnReceivedFrom?.Invoke(Socket, result);
-
-            while (!_receivedMessageFromData.IsEmpty)
-                if (_receivedMessageFromData.TryDequeue(out result))
-                    OnReceivedMessageFrom?.Invoke(Socket, result);
-
-            while (!_sendComplete.IsEmpty)
-                if (_sendComplete.TryDequeue(out result))
-                    OnSent?.Invoke(Socket, result);
-
-            while (!_sendToComplete.IsEmpty)
-                if (_sendToComplete.TryDequeue(out result))
-                    OnSentTo?.Invoke(Socket, result);
-        }
 
         /// <summary>
         ///     You may give the buffer back if you do not need it anymore
@@ -186,35 +146,35 @@
 
         private void OnSendComplete(object sender, SocketAsyncEventArgs socketAsyncEventArgs)
         {
-            _sendComplete.Enqueue(socketAsyncEventArgs);
+            Task.Run(() => OnSent?.Invoke(this, socketAsyncEventArgs));
         }
 
         private void OnSendToComplete(object sender, SocketAsyncEventArgs socketAsyncEventArgs)
         {
-            _sendToComplete.Enqueue(socketAsyncEventArgs);
+            Task.Run(() => OnSentTo?.Invoke(this, socketAsyncEventArgs));
         }
 
         private void OnAcceptedComplete(object sender, SocketAsyncEventArgs socketAsyncEventArgs)
         {
-            _acceptedSockets.Enqueue(socketAsyncEventArgs);
+            Task.Run(() => OnAccepted?.Invoke(this, socketAsyncEventArgs));
             SetupAccept();
         }
 
         private void OnReceivedComplete(object sender, SocketAsyncEventArgs socketAsyncEventArgs)
         {
-            _receivedData.Enqueue(socketAsyncEventArgs);
+            Task.Run(() => OnReceived?.Invoke(this, socketAsyncEventArgs));
             SetupReceive();
         }
 
         private void OnReceivedFromComplete(object sender, SocketAsyncEventArgs socketAsyncEventArgs)
         {
-            _receivedFromData.Enqueue(socketAsyncEventArgs);
+            Task.Run(() => OnReceivedFrom?.Invoke(this, socketAsyncEventArgs));
             SetupReceiveFrom();
         }
 
         private void OnReceivedMessageFromComplete(object sender, SocketAsyncEventArgs socketAsyncEventArgs)
         {
-            _receivedMessageFromData.Enqueue(socketAsyncEventArgs);
+            Task.Run(() => OnReceivedMessageFrom?.Invoke(this, socketAsyncEventArgs));
             SetupReceiveMessageFrom();
         }
 
@@ -275,12 +235,12 @@
             return Socket.Equals(obj);
         }
 
-        public static bool operator ==(EasySocket @this, EasySocket other)
+        public static bool operator ==(EasyTaskSocket @this, EasyTaskSocket other)
         {
             return @this?.Socket == other?.Socket;
         }
 
-        public static bool operator !=(EasySocket @this, EasySocket other)
+        public static bool operator !=(EasyTaskSocket @this, EasyTaskSocket other)
         {
             return @this?.Socket != other?.Socket;
         }

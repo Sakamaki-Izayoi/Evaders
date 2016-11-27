@@ -9,18 +9,6 @@
         {
         }
 
-        protected override void OnActionExecuted(DummyUser @from, GameAction action)
-        {
-        }
-
-        protected override void OnTurnEnded()
-        {
-        }
-
-        protected override void OnGameEnd()
-        {
-        }
-
         public void AddGameAction(DummyUser from, GameAction action)
         {
             AddAction(from, action);
