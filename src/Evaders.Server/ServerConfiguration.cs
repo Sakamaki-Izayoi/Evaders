@@ -5,7 +5,7 @@
 
     public class ServerConfiguration
     {
-        public static ServerConfiguration Default => new ServerConfiguration(new GameSettings(1000f, 30, 0.5f, 10f, new CharacterData(100, 10, 20, 0.75f, 65, 250f, 100f)), "0.0.0.0", 5, 15f, 20, 9090, "Welcome :)");
+        public static ServerConfiguration Default => new ServerConfiguration(new GameSettings(1000f, 30, 0.5f, 10f, new CharacterData(100, 10, 20, 0.75f, 65, 250f, 100f), 5f, 50f, 1), "0.0.0.0", 5, 15f, 20, 9090, "Welcome :)");
 
         public bool IsValid
         {

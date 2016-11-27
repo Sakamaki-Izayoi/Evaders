@@ -39,7 +39,7 @@
 
 
             spritebatch.Begin(transformMatrix: viewMatrix, blendState: BlendState.AlphaBlend, samplerState: SamplerState.LinearClamp);
-            DrawCircle(spritebatch, Vector2.Zero, game.Settings.ArenaRadius, Color.White);
+            DrawCircle(spritebatch, Vector2.Zero, game.CurrentArenaRadius, Color.White);
 
             foreach (var validEntity in game.ValidEntities)
             {
@@ -66,12 +66,12 @@
             spritebatch.End();
         }
 
-        private void DrawCircle(SpriteBatch spriteBatch, Core.Utility.Vector2 position, float radius, Color color)
+        private void DrawCircle(SpriteBatch spriteBatch, Core.Utility.Vector2 position, double radius, Color color)
         {
             spriteBatch.Draw(TextureManager.Get(Texture.Circle), new Rectangle((int) (position.X - radius), (int) (position.Y - radius), (int) (radius*2), (int) (radius*2)), color);
         }
 
-        private void DrawCircle(SpriteBatch spriteBatch, Vector2 position, float radius, Color color)
+        private void DrawCircle(SpriteBatch spriteBatch, Vector2 position, double radius, Color color)
         {
             DrawCircle(spriteBatch, new Core.Utility.Vector2(position.X, position.Y), radius, color);
         }

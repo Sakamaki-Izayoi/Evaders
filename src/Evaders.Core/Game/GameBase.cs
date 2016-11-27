@@ -1,5 +1,6 @@
 ﻿namespace Evaders.Core.Game
 {
+    using System;
     using System.Collections.Generic;
     using Newtonsoft.Json;
     using Utility;
@@ -10,6 +11,8 @@
         public abstract IEnumerable<Projectile> ValidProjectiles { get; }
         public abstract double TimePerFrameSec { get; }
 
+        public double CurrentArenaRadius => GetArenaRadius(Turn);
+
         [JsonProperty]
         public int Turn { get; protected set; }
 
@@ -19,6 +22,8 @@
         {
             Settings = settings;
         }
+
+        public double GetArenaRadius(int turn) => turn < Settings.ArenaShrinkStartTurn ? Settings.ArenaRadius : (float) Math.Max(0f, Settings.ArenaRadius - Settings.ArenaShrinkPerSec*(turn + 1 - Settings.ArenaShrinkStartTurn)*TimePerFrameSec);
 
         protected internal abstract void HandleDeath(Projectile projectile);
         protected internal abstract void HandleDeath(EntityBase entity);

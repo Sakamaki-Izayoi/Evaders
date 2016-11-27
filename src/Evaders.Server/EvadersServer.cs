@@ -2,14 +2,12 @@
 {
     using System;
     using System.Collections.Concurrent;
-    using System.Collections.Generic;
     using System.Linq;
     using System.Net;
     using System.Net.Sockets;
     using System.Threading;
     using CommonNetworking;
     using CommonNetworking.CommonPayloads;
-    using Core.Utility;
     using Microsoft.Extensions.Logging;
     using Payloads;
 
@@ -160,9 +158,7 @@
         {
             ServerGame game;
             if (!_runningGames.TryRemove(serverGame.GameIdentifier, out game))
-            {
                 return;
-            }
 
             if (serverGame.Users.All(usr => !usr.Connected))
                 return;

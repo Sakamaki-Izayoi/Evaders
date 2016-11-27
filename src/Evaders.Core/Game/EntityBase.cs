@@ -6,16 +6,17 @@
 
     public class EntityBase
     {
-        public bool CanShoot => (Game.Turn - LastShotFrame) * Game.TimePerFrameSec >= CharData.ReloadDelaySec;
-        public int ReloadFrames => (int)Math.Ceiling(CharData.ReloadDelaySec / Game.TimePerFrameSec);
+        public bool CanShoot => (Game.Turn - LastShotTurn)*Game.TimePerFrameSec >= CharData.ReloadDelaySec;
+        public int ReloadFrames => (int) Math.Ceiling(CharData.ReloadDelaySec/Game.TimePerFrameSec);
 
         [JsonProperty]
         public int Health { get; private set; }
 
         [JsonProperty]
-        public Vector2 Position { get; internal set; }
+        public Vector2 Position { get; private set; }
 
         public int HitboxSize => CharData.HitboxSize;
+        public bool IsInsideArena => InsideArenaNow(Position);
 
         [JsonProperty]
         public long EntityIdentifier { get; }
@@ -26,16 +27,17 @@
         [JsonProperty]
         public Vector2 MovingTo { get; private set; }
 
-        public double MovingDistancePerTurn => CharData.SpeedSec * Game.TimePerFrameSec;
+        public double MovingDistancePerTurn => CharData.SpeedSec*Game.TimePerFrameSec;
         public Vector2 PositionNextTurn => GetPositionIn(1);
 
         [JsonProperty]
-        public readonly CharacterData CharData;
+        public int LastShotTurn { get; private set; } = short.MinValue;
+
+        public int NextReloadedTurn => LastShotTurn + ReloadFrames;
+
+        [JsonProperty] public readonly CharacterData CharData;
 
         internal GameBase Game;
-
-        [JsonProperty]
-        internal int LastShotFrame = short.MinValue;
 
         public EntityBase(CharacterData charData, Vector2 position, long playerIdentifier, long entityIdentifier, GameBase game)
         {
@@ -60,18 +62,36 @@
             MovingTo = movingTo;
         }
 
-        public void InflictDamage(int amount)
+        internal void InflictDamage(int amount)
         {
             if ((Health -= amount) <= 0)
                 Game.HandleDeath(this);
         }
 
-        public void Update()
+        public bool InsideArenaNow(Vector2 position) => position.Distance(Vector2.Zero, true) <= Game.CurrentArenaRadius*Game.CurrentArenaRadius;
+
+        public bool InsideArenaOnTurn(Vector2 position, int turn)
         {
-            if ((Position - MovingTo).LengthSqr < CharData.SpeedSec * Game.TimePerFrameSec * CharData.SpeedSec * Game.TimePerFrameSec)
+            var radiusThen = Game.GetArenaRadius(turn);
+            return position.Distance(Vector2.Zero, true) <= radiusThen*radiusThen;
+        }
+
+        public bool InsideArenaOnArrival(Vector2 position) => InsideArenaOnTurn(position, GetTurnsToReach(position) + Game.Turn);
+
+        public int GetTurnsToReach(Vector2 position) => (int) Math.Ceiling(position.Distance(Position)/MovingDistancePerTurn);
+
+        internal void UpdateMovement()
+        {
+            if ((Position - MovingTo).LengthSqr < CharData.SpeedSec*Game.TimePerFrameSec*CharData.SpeedSec*Game.TimePerFrameSec)
                 Position = MovingTo;
             else
-                Position = Position.Extended(MovingTo, CharData.SpeedSec * Game.TimePerFrameSec);
+                Position = Position.Extended(MovingTo, CharData.SpeedSec*Game.TimePerFrameSec);
+        }
+
+        internal void UpdateCombat()
+        {
+            if (!IsInsideArena)
+                InflictDamage(Game.Settings.OutOfArenaDamagePerTurn);
         }
 
         /// <summary>
@@ -81,8 +101,8 @@
         /// <returns></returns>
         public int GetNeededProjectileTurns(Vector2 position)
         {
-            var sec = position.Distance(Position.Extended(position, HitboxSize + CharData.ProjectileHitboxSize), true) / (CharData.ProjectileSpeedSec * CharData.ProjectileSpeedSec);
-            return (int)Math.Ceiling(sec / Game.TimePerFrameSec);
+            var sec = position.Distance(Position.Extended(position, HitboxSize + CharData.ProjectileHitboxSize), true)/(CharData.ProjectileSpeedSec*CharData.ProjectileSpeedSec);
+            return (int) Math.Ceiling(sec/Game.TimePerFrameSec);
         }
 
         internal bool MoveToInternal(Vector2 coord)
@@ -97,11 +117,23 @@
                 return false;
             if (CanShoot)
             {
-                LastShotFrame = Game.Turn;
+                LastShotTurn = Game.Turn;
                 Game.SpawnProjectile((coord - Position).Unit, this);
                 return true;
             }
             return false;
+        }
+
+        public Vector2 GetPositionOn(uint turn)
+        {
+            return GetPositionOn(turn, MovingTo);
+        }
+
+        public Vector2 GetPositionOn(uint turn, Vector2 movingTo)
+        {
+            if (turn < Game.Turn)
+                throw new ArgumentException("Cannot query past turn positions", nameof(turn));
+            return GetPositionIn((uint) (turn - Game.Turn), movingTo);
         }
 
         public Vector2 GetPositionIn(uint turns)
@@ -111,8 +143,8 @@
 
         public Vector2 GetPositionIn(uint turns, Vector2 movingTo)
         {
-            var distance = MovingDistancePerTurn * turns;
-            return movingTo.Distance(Position, true) <= distance * distance ? movingTo : Position.Extended(movingTo, distance);
+            var distance = MovingDistancePerTurn*turns;
+            return movingTo.Distance(Position, true) <= distance*distance ? movingTo : Position.Extended(movingTo, distance);
         }
     }
 }
