@@ -1,4 +1,4 @@
-﻿namespace Evaders.Services
+﻿namespace Evaders.Game
 {
     public class GameServerSettings
     {

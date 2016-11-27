@@ -1,13 +1,13 @@
-﻿namespace Evaders.Services
+﻿namespace Evaders.Game.Servers
 {
     using System;
     using System.Threading;
     using System.Threading.Tasks;
-    using Factories;
     using JetBrains.Annotations;
     using Microsoft.Extensions.Logging;
     using Microsoft.Extensions.Options;
     using Server;
+    using Services;
 
     [UsedImplicitly]
     public class DefaultGameServer : IGameServer
@@ -24,33 +24,48 @@
 
         /* Task related stuff */
         private Task _gameServerLoop;
-        private readonly CancellationTokenSource _cancellation;
+        private CancellationTokenSource _cancellation;
 
         /* Game server related stuff */
         private EvadersServer _server;
+
+        /* If the game server is currently running */
+        private bool _running = false;
+
+        /* Logging */
+        private readonly ILogger _logger;
 
 
         public DefaultGameServer(ILoggerFactory loggerFactory, IProviderFactory<IServerSupervisor> serverSupervisorFactory, IProviderFactory<IMatchmaking> matchmakingFactory, IProviderFactory<ServerConfiguration> serverConfigurationFactory, IOptions<GameServerSettings> settings)
         {
             _loggerFactory = loggerFactory;
+            _logger = loggerFactory.CreateLogger<DefaultGameServer>();
             _serverSupervisorFactory = serverSupervisorFactory;
             _matchmakingFactory = matchmakingFactory;
             _serverConfigurationFactory = serverConfigurationFactory;
             _settings = settings.Value;
-            _cancellation = new CancellationTokenSource();
         }
 
         /// <inheritdoc />
         public void Dispose()
         {
             _cancellation.Dispose();
+            Stop();
             _disposed = true;
         }
 
         /// <inheritdoc />
         public void Start()
         {
-            if (_disposed) throw new ObjectDisposedException(nameof(DefaultGameServer));
+            if (_disposed)
+                throw new ObjectDisposedException(nameof(DefaultGameServer));
+            if (_running)
+                throw new InvalidOperationException("The server is already running.");
+            _running = true;
+
+            _logger.LogInformation("Starting game server ...");
+
+            _cancellation = new CancellationTokenSource();
 
             _server = new EvadersServer(_serverSupervisorFactory.Create(_settings.SupervisorProviderId), _matchmakingFactory.Create(_settings.MatchmakingProviderId), _loggerFactory.CreateLogger<EvadersServer>(), _serverConfigurationFactory.Create(_settings.ServerConfigurationProviderId));
 
@@ -58,21 +73,40 @@
             _gameServerLoop.Start();
         }
 
+        /// <inheritdoc />
+        public void Stop()
+        {
+            if (_disposed) throw new ObjectDisposedException(nameof(DefaultGameServer));
+            if (!_running) return;
+            _running = false;
+
+            _logger.LogInformation($"Stopping game server ...");
+
+            _cancellation.Dispose();
+            _gameServerLoop.Wait();
+            _gameServerLoop = null;
+        }
+
 
         private async void GameLoop(object target)
         {
-            var token = (CancellationToken)target;
+            var token = (CancellationToken) target;
             var server = _server;
 
-            if (server == null) throw new ArgumentException();
+            if (server == null)
+                throw new ArgumentException();
+
+            _logger.LogInformation("Starting game server loop ...");
 
             while (true)
             {
-                token.ThrowIfCancellationRequested();
+                if (token.IsCancellationRequested) break;
                 server.Update();
 
                 await Task.Delay(75, token);
             }
+
+            _logger.LogInformation("Game server loop stopped.");
         }
     }
 }

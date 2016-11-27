@@ -1,8 +1,10 @@
 ﻿namespace Evaders
 {
     using System;
-    using System.Linq;
     using Data;
+    using Game;
+    using Game.Servers;
+    using Game.Supervisors;
     using JetBrains.Annotations;
     using Microsoft.AspNetCore.Builder;
     using Microsoft.AspNetCore.Hosting;
@@ -11,15 +13,19 @@
     using Microsoft.Extensions.Configuration;
     using Microsoft.Extensions.DependencyInjection;
     using Microsoft.Extensions.Logging;
+    using Microsoft.Extensions.Options;
     using Models;
     using Server;
     using Services;
     using Services.Factories;
+    using Services.Providers;
 
     [UsedImplicitly]
     public class Startup
     {
         public IConfigurationRoot Configuration { get; }
+
+        public IGameServer GameServer { get; set; }
 
 
         public Startup(IHostingEnvironment env)
@@ -53,10 +59,14 @@
              * Game server setup
              */
             services.AddSingleton<IGameServer, DefaultGameServer>();
-            // services.Configure<GameServerSettings>(e => );
-            services.AddSingleton<IGameServer, DefaultGameServer>();
+            services.Configure<GameServerSettings>(e =>
+            {
+                e.MatchmakingProviderId = "default";
+                e.ServerConfigurationProviderId = "default";
+                e.SupervisorProviderId = "default";
+            });
             services.AddSingleton(typeof(IProviderFactory<>), typeof(DefaultFactory<>));
-            
+
             /*
              * MVC setup
              */
@@ -102,14 +112,25 @@
                     "{controller=Home}/{action=Index}/{id?}");
             });
 
-
-            ConfigureProviders(services);
+            ConfigureGameServer(services);
         }
 
-
-        public void ConfigureProviders(IServiceProvider services)
+        public void ConfigureGameServer(IServiceProvider services)
         {
-            
+            var settings = services.GetService<IOptions<GameServerSettings>>().Value;
+
+            services.GetService<IProviderFactory<IServerSupervisor>>().AddProvider(new DefaultProvider<IServerSupervisor>("default", () => new DefaultServerSupervisor(services.GetService<ILogger<DefaultServerSupervisor>>())));
+            services.GetService<IProviderFactory<IMatchmaking>>().AddProvider(new DefaultProvider<IMatchmaking>("default", () => new Matchmaking(15f, services.GetService<ILogger<Matchmaking>>(), services.GetService<IProviderFactory<IServerSupervisor>>().Create(settings.SupervisorProviderId))));
+            services.GetService<IProviderFactory<ServerConfiguration>>().AddProvider(new DefaultProvider<ServerConfiguration>("default", () => ServerConfiguration.Default));
+            // todo load ServerConfiguration from gamsettings.json
+
+
+            var gameServer = services.GetService<IGameServer>();
+            GameServer = gameServer;
+
+            gameServer.Start();
+
+            //services.GetService<IProviderFactory<IServerSupervisor>>().AddProvider(new DefaultProvider<IServerSupervisor>("default", () => ));
         }
     }
 }
