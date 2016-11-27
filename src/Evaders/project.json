@@ -63,6 +63,11 @@
 
   "frameworks": {
     "netcoreapp1.0": {
+      "dependencies": {
+        "Evaders.Server": {
+          "target": "project"
+        }
+      },
       "imports": [
         "dotnet5.6",
         "portable-net45+win8"
@@ -86,6 +91,7 @@
       "wwwroot",
       "**/*.cshtml",
       "appsettings.json",
+      "gamesettings.json",
       "web.config"
     ]
   },

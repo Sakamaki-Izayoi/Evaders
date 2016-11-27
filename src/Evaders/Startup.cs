@@ -1,5 +1,7 @@
 ﻿namespace Evaders
 {
+    using System;
+    using System.Linq;
     using Data;
     using JetBrains.Annotations;
     using Microsoft.AspNetCore.Builder;
@@ -10,6 +12,9 @@
     using Microsoft.Extensions.DependencyInjection;
     using Microsoft.Extensions.Logging;
     using Models;
+    using Server;
+    using Services;
+    using Services.Factories;
 
     [UsedImplicitly]
     public class Startup
@@ -45,12 +50,20 @@
                 .AddDefaultTokenProviders();
 
             /*
+             * Game server setup
+             */
+            services.AddSingleton<IGameServer, DefaultGameServer>();
+            // services.Configure<GameServerSettings>(e => );
+            services.AddSingleton<IGameServer, DefaultGameServer>();
+            services.AddSingleton(typeof(IProviderFactory<>), typeof(DefaultFactory<>));
+            
+            /*
              * MVC setup
              */
             services.AddMvc();
         }
 
-        public void Configure(IApplicationBuilder app, IHostingEnvironment env, ILoggerFactory loggerFactory)
+        public void Configure(IApplicationBuilder app, IHostingEnvironment env, ILoggerFactory loggerFactory, IServiceProvider services)
         {
             loggerFactory.AddConsole(Configuration.GetSection("Logging"));
             loggerFactory.AddDebug();
@@ -88,6 +101,15 @@
                     "default",
                     "{controller=Home}/{action=Index}/{id?}");
             });
+
+
+            ConfigureProviders(services);
+        }
+
+
+        public void ConfigureProviders(IServiceProvider services)
+        {
+            
         }
     }
 }
