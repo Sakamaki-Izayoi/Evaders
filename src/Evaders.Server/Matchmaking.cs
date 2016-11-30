@@ -26,22 +26,21 @@
         }
 
         public event EventHandler<MatchCreatedArgs> OnSuggested;
+        public IServerSupervisor Supervisor { get; set; }
         public IEnumerable<IServerUser> InQueue => _inQueue;
         private readonly List<IServerUser> _inQueue = new List<IServerUser>();
         private readonly Dictionary<IServerUser, double> _joinedQueueTime = new Dictionary<IServerUser, double>();
         private readonly ILogger _logger;
         private readonly string _gameMode;
         private readonly float _maxTimeInQueue;
-        private readonly IServerSupervisor _supervisor;
         private readonly Stopwatch _time = Stopwatch.StartNew();
         private double _lastQueuerTime;
 
-        public Matchmaking(string gameMode, float maxTimeInQueue, ILogger logger, IServerSupervisor supervisor)
+        public Matchmaking(string gameMode, float maxTimeInQueue, ILogger logger)
         {
             _gameMode = gameMode;
             _maxTimeInQueue = maxTimeInQueue;
             _logger = logger;
-            _supervisor = supervisor;
         }
 
         public void Update()
@@ -60,12 +59,12 @@
                             bestHoomanBot = hoomanBots[0];
                         else
                         {
-                            var bestMatch = _supervisor.GetBestChoice(_inQueue[i].Login, hoomanBots.Select(item => item.Login));
+                            var bestMatch = Supervisor.GetBestChoice(_inQueue[i].Login, hoomanBots.Select(item => item.Login));
                             bestHoomanBot = hoomanBots.FirstOrDefault(bot => bot.Login == bestMatch);
                         }
                         if (bestHoomanBot == null)
                         {
-                            _logger.LogError($"{GetType().Name}: {_supervisor.GetType()} gave me an invalid GUID as best choice!");
+                            _logger.LogError($"{GetType().Name}: {Supervisor.GetType()} gave me an invalid GUID as best choice!");
                             continue;
                         }
 
@@ -74,12 +73,12 @@
                     }
                     else
                     {
-                        var bestMatch = _supervisor.GetBestChoice(_inQueue[i].Login, _inQueue.Where(item => item != _inQueue[i]).ToArray().Select(item => item.Login));
+                        var bestMatch = Supervisor.GetBestChoice(_inQueue[i].Login, _inQueue.Where(item => item != _inQueue[i]).ToArray().Select(item => item.Login));
                         var bestBotBot = hoomanBots.FirstOrDefault(bot => bot.Login == bestMatch);
 
                         if (bestBotBot == null)
                         {
-                            _logger.LogError($"{GetType().Name}: {_supervisor.GetType()} gave me an invalid GUID as best choice!");
+                            _logger.LogError($"{GetType().Name}: {Supervisor.GetType()} gave me an invalid GUID as best choice!");
                             continue;
                         }
 
@@ -101,11 +100,11 @@
             {
                 AddUser(user);
 
-                var bestMatch = _supervisor.GetBestChoice(user.Login, _inQueue.Where(item => item != user).ToArray().Select(item => item.Login));
+                var bestMatch = Supervisor.GetBestChoice(user.Login, _inQueue.Where(item => item != user).ToArray().Select(item => item.Login));
                 var bestBotBot = _inQueue.FirstOrDefault(bot => bot.Login == bestMatch);
 
                 if (bestBotBot == null)
-                    _logger.LogError($"{GetType().Name}: {_supervisor.GetType()} gave me an invalid GUID as best choice!");
+                    _logger.LogError($"{GetType().Name}: {Supervisor.GetType()} gave me an invalid GUID as best choice!");
                 else
                 {
                     _logger.LogDebug($"Found a match (Queue very empty for a longer time, matching with bot: {bestBotBot})");
@@ -119,7 +118,7 @@
                 _lastQueuerTime = time;
 
             AddUser(user);
-            var autoBestMatch = _inQueue.FirstOrDefault(usr => usr != user && !usr.HasEverPlayedAgainst(user, _supervisor));
+            var autoBestMatch = _inQueue.FirstOrDefault(usr => usr != user && !usr.HasEverPlayedAgainst(user, Supervisor));
             if (autoBestMatch != null)
             {
                 _logger.LogDebug($"Found a match (never played against {autoBestMatch})");

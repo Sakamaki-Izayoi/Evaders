@@ -28,7 +28,7 @@
         private readonly IProviderFactory<GameSettings> _settingsFactory;
         private long _gameIdentifier;
         private long _userIdentifier;
-        private ConcurrentDictionary<string, IMatchmaking> _matchmaking;
+        private readonly ConcurrentDictionary<string, IMatchmaking> _matchmaking;
 
 
         public EvadersServer([NotNull] IProviderFactory<IServerSupervisor> supervisorFactoryFactory, [NotNull] IProviderFactory<GameSettings> settingsFactory, [NotNull] IProviderFactory<IMatchmaking> matchmakingFactory, [NotNull] ILogger logger, [NotNull] ServerSettings config)
@@ -53,6 +53,7 @@
             _matchmaking = new ConcurrentDictionary<string, IMatchmaking>(config.GameModes.ToDictionary(item => item, matchmakingFactory.Create));
             foreach (var keyValuePair in _matchmaking)
             {
+                keyValuePair.Value.Supervisor = _supervisorFactory.Create(keyValuePair.Key);
                 keyValuePair.Value.OnSuggested += OnMatchmakingFoundMatchup;
             }
             _config = config;

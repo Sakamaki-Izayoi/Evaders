@@ -1,10 +1,13 @@
 ﻿namespace Evaders.Server
 {
     using System;
+    using Integration;
 
     public interface IMatchmaking
     {
         event EventHandler<Matchmaking.MatchCreatedArgs> OnSuggested;
+
+        IServerSupervisor Supervisor { get; set; }
 
         /// <returns>How often this user is in that queue</returns>
         int GetRegisterCount(IServerUser user);
