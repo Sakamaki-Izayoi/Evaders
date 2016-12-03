@@ -1,7 +1,6 @@
 ﻿/// <reference path="shared.ts" />
 /// <reference path="communication.ts" />
-/// <reference path="../typed/phaser/phaser.d.ts" />
-/// <reference path="../typed/jquery/jquery.d.ts" />
+/// <reference path="../typings/index.d.ts"/>
 
 
 /* Varaibles injected by the backend */
@@ -44,17 +43,13 @@ abstract class GameState {
     }
 
 
-    create() {
-    }
+    create(): void { }
 
-    preload() {
-    }
+    preload(): void { }
 
-    render() {
-    }
+    render(): void { }
 
-    update() {
-    }
+    update(): void { }
 }
 
 /**

@@ -3,6 +3,7 @@
     using System;
     using System.Threading;
     using System.Threading.Tasks;
+    using Core.Game;
     using JetBrains.Annotations;
     using Microsoft.Extensions.Logging;
     using Microsoft.Extensions.Options;
@@ -20,6 +21,7 @@
         private readonly ILoggerFactory _loggerFactory;
         private readonly IProviderFactory<IServerSupervisor> _serverSupervisorFactory;
         private readonly IProviderFactory<IMatchmaking> _matchmakingFactory;
+        private readonly IProviderFactory<GameSettings> _gameSettingsFactory;
         private readonly IProviderFactory<ServerSettings> _serverConfigurationFactory;
         private readonly GameServerSettings _settings;
 
@@ -37,12 +39,13 @@
         private readonly ILogger _logger;
 
 
-        public DefaultGameServer(ILoggerFactory loggerFactory, IProviderFactory<IServerSupervisor> serverSupervisorFactory, IProviderFactory<IMatchmaking> matchmakingFactory, IProviderFactory<ServerSettings> serverConfigurationFactory, IOptions<GameServerSettings> settings)
+        public DefaultGameServer(ILoggerFactory loggerFactory, IProviderFactory<IServerSupervisor> serverSupervisorFactory, IProviderFactory<IMatchmaking> matchmakingFactory, IProviderFactory<GameSettings> gameSettingsFactory, IProviderFactory<ServerSettings> serverConfigurationFactory, IOptions<GameServerSettings> settings)
         {
             _loggerFactory = loggerFactory;
             _logger = loggerFactory.CreateLogger<DefaultGameServer>();
             _serverSupervisorFactory = serverSupervisorFactory;
             _matchmakingFactory = matchmakingFactory;
+            _gameSettingsFactory = gameSettingsFactory;
             _serverConfigurationFactory = serverConfigurationFactory;
             _settings = settings.Value;
         }
@@ -68,7 +71,7 @@
 
             _cancellation = new CancellationTokenSource();
 
-            _server = new EvadersServer(_serverSupervisorFactory.Create(_settings.SupervisorProviderId), _matchmakingFactory.Create(_settings.MatchmakingProviderId), _loggerFactory.CreateLogger<EvadersServer>(), _serverConfigurationFactory.Create(_settings.ServerConfigurationProviderId));
+            _server = new EvadersServer(_serverSupervisorFactory, _gameSettingsFactory, _matchmakingFactory, _loggerFactory.CreateLogger<EvadersServer>(), _serverConfigurationFactory.Create(_settings.ServerConfigurationProviderId));
 
             _gameServerLoop = new Task(GameLoop, _cancellation.Token, _cancellation.Token, TaskCreationOptions.LongRunning);
             _gameServerLoop.Start();

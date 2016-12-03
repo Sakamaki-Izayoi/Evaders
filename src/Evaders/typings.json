@@ -1,0 +1,11 @@
+{
+  "name": "asp.net",
+  "resolution": {
+    "main": "wwwroot/typings"
+  },
+  "dependencies": {},
+  "globalDependencies": {
+    "jquery": "registry:dt/jquery#1.10.0+20160929162922",
+    "phaser": "github:photonstorm/phaser/typescript/typings.json#v2.6.2"
+  }
+}

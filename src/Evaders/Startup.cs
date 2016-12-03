@@ -121,8 +121,8 @@
             var settings = services.GetService<IOptions<GameServerSettings>>().Value;
 
             services.GetService<IProviderFactory<IServerSupervisor>>().AddProvider(new DefaultProvider<IServerSupervisor>("default", () => new DefaultServerSupervisor(services.GetService<ILogger<DefaultServerSupervisor>>())));
-            services.GetService<IProviderFactory<IMatchmaking>>().AddProvider(new DefaultProvider<IMatchmaking>("default", () => new Matchmaking(15f, services.GetService<ILogger<Matchmaking>>(), services.GetService<IProviderFactory<IServerSupervisor>>().Create(settings.SupervisorProviderId))));
-            services.GetService<IProviderFactory<ServerSettings>>().AddProvider(new DefaultProvider<ServerSettings>("default", () => ServerSettings.Default));
+            services.GetService<IProviderFactory<IMatchmaking>>().AddProvider(new DefaultProvider<IMatchmaking>("default", () => new Matchmaking("default", 15f, services.GetService<ILogger<Matchmaking>>())));
+            services.GetService<IProviderFactory<ServerSettings>>().AddProvider(new DefaultProvider<ServerSettings>("default", () => new ServerSettings()));
             // todo load ServerSettings from gamsettings.json
 
 

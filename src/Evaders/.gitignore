@@ -4,6 +4,8 @@
 # TS / JS specifics
 wwwroot/_references.js
 wwwroot/ts/**/*.js
+wwwroot/ts/**/*.js.map
+wwwroot/typings/**/*
 
 # User-specific files
 *.suo
