@@ -2,6 +2,7 @@
 {
     using System.Collections.Generic;
     using Game;
+    using Utility;
 
     internal class DummyGame : DefaultSandboxGame<DummyUser>
     {
@@ -17,6 +18,11 @@
         public void DoNextTurn()
         {
             NextTurn();
+        }
+
+        public Entity AddEntity(Vector2 position, long playerIdentifier, CharacterData charData)
+        {
+            return SpawnEntity(position, playerIdentifier, charData);
         }
 
         protected override void OnIllegalAction(DummyUser user, string warningMsg)

@@ -5,7 +5,7 @@
 
     public class GameSettings
     {
-        public static GameSettings Default => new GameSettings(1000f, 30, 0.5f, 10f, new CharacterData(100, 10, 20, 0.75f, 65, 250f, 100f), 50f, 10f, 1);
+        public static GameSettings Default => new GameSettings(1000f, 30, 0.5f, 10f, new CharacterData(100, 10, 20, 0.75f, 65, 250f, 100f, 75), 50f, 10f, 1);
         public virtual bool IsValid => ArenaRadius > 0 && TurnsPerSecond > 0 && MaxTurnTimeSec > 0 && DefaultCharacterData.IsValid && ArenaShrinkStartTurn >= 0 && ArenaShrinkPerSec > 0f && OutOfArenaDamagePerTurn > 0;
 
         [JsonProperty]
