@@ -10,12 +10,12 @@
     internal class GameTest
     {
         private static CharacterData TestCharData => new CharacterData(100, 10, 10, 0.5, 30, 300d, 75d, 100);
-        private static GameSettings TestGameSettings => new GameSettings(100f, 30, 1f, 10f, TestCharData, 100f, 100f * 30, TestCharData.MaxHealth);
+        private static GameSettings TestGameSettings => new GameSettings(100f, 30, 1f, 10f, TestCharData, 100f, 100f*30, TestCharData.MaxHealth);
 
         [Test]
         public void ArenaShrinking()
         {
-            var game = new DummyGame(new[] { new DummyUser(true, 0) }, TestGameSettings);
+            var game = new DummyGame(new[] {new DummyUser(true, 0)}, TestGameSettings);
 
             game.DoNextTurn();
             Assert.AreEqual(1, game.ValidEntitesControllable.Count(), "Arena shrank instantly / Shrinking start time not applied");
@@ -23,7 +23,7 @@
             do
             {
                 game.DoNextTurn();
-            } while (game.Turn < game.Settings.ArenaShrinkStartTurn);
+            } while (game.Turn < game.Settings.ArenaShrinkStartTurn); // one turn before shrinking starts
 
             Assert.AreEqual(1, game.ValidEntitesControllable.Count(), "Entity gone before arena shrinking");
 
@@ -37,7 +37,7 @@
         [Test]
         public void BasicTurn()
         {
-            var game = new DummyGame(new[] { new DummyUser(true, 0), new DummyUser(true, 1) }, TestGameSettings);
+            var game = new DummyGame(new[] {new DummyUser(true, 0), new DummyUser(true, 1)}, TestGameSettings);
             foreach (var validEntity in game.ValidEntitesControllable)
             {
                 validEntity.MoveTo(validEntity.Position + new Vector2(100, 0));
@@ -49,7 +49,7 @@
         [Test]
         public void CanMove()
         {
-            var game = new DummyGame(new[] { new DummyUser(true, 0), new DummyUser(true, 1) }, TestGameSettings);
+            var game = new DummyGame(new[] {new DummyUser(true, 0), new DummyUser(true, 1)}, TestGameSettings);
             var firstEntity = game.ValidEntitesControllable.First();
 
             Assert.Greater(firstEntity.CharData.SpeedSec, 0d, "Invalid speed, cannot test movement");
@@ -64,7 +64,7 @@
         [Test]
         public void CanShoot()
         {
-            var game = new DummyGame(new[] { new DummyUser(true, 0), new DummyUser(true, 1) }, TestGameSettings);
+            var game = new DummyGame(new[] {new DummyUser(true, 0), new DummyUser(true, 1)}, TestGameSettings);
             game.ValidEntitesControllable.First().Shoot(game.ValidEntities.Last().Position);
             game.DoNextTurn();
 
@@ -76,20 +76,44 @@
         }
 
         [Test]
+        // ReSharper disable once InconsistentNaming
+        public void EntityAPI()
+        {
+            var game = new DummyGame(new[] {new DummyUser(true, 0), new DummyUser(true, 1)}, TestGameSettings);
+            var entity = game.ValidEntitesControllable.First();
+
+            var target = game.ValidEntities.First(ent => ent.EntityIdentifier != entity.EntityIdentifier);
+            Assert.AreNotEqual(entity, target, "wtf");
+
+            entity.Shoot(entity.Position + new Vector2(100, 0));
+            game.DoNextTurn();
+
+            var shootTurn = entity.NextReloadedTurn;
+
+            while (!entity.CanShoot)
+                game.DoNextTurn();
+
+            Assert.AreEqual(shootTurn, game.Turn, $"Incorrect API: {nameof(entity.NextReloadedTurn)}");
+            Assert.AreEqual(entity.ReloadFrames, game.Turn, $"Incorrect API: {nameof(entity.ReloadFrames)}");
+
+            // Todo
+        }
+
+        [Test]
         public void GameEnd()
         {
-            var game = new DummyGame(new[] { new DummyUser(true, 0), new DummyUser(true, 1) }, TestGameSettings);
+            var game = new DummyGame(new[] {new DummyUser(true, 0), new DummyUser(true, 1)}, TestGameSettings);
             var sourceEntity = game.ValidEntitesControllable.First();
             var targetEntity = game.ValidEntitesControllable.Last();
 
             Assert.AreNotEqual(sourceEntity, targetEntity);
             Assert.Greater(sourceEntity.ReloadFrames, 0);
 
-            var shotsForKill = (int)Math.Ceiling(targetEntity.Health / (double)sourceEntity.CharData.ProjectileDamage);
-            var travelTimeSec = (sourceEntity.Position.Distance(targetEntity.Position) - (sourceEntity.CharData.HitboxSize + sourceEntity.CharData.ProjectileHitboxSize * 2 + targetEntity.CharData.HitboxSize)) / sourceEntity.CharData.ProjectileSpeedSec;
-            var travelFrames = (int)(travelTimeSec / game.TimePerFrameSec);
+            var shotsForKill = (int) Math.Ceiling(targetEntity.Health/(double) sourceEntity.CharData.ProjectileDamage);
+            var travelTimeSec = (sourceEntity.Position.Distance(targetEntity.Position) - (sourceEntity.CharData.HitboxSize + sourceEntity.CharData.ProjectileHitboxSize*2 + targetEntity.CharData.HitboxSize))/sourceEntity.CharData.ProjectileSpeedSec;
+            var travelFrames = (int) (travelTimeSec/game.TimePerFrameSec);
 
-            var expectedGameFrames = (shotsForKill - 1) * sourceEntity.ReloadFrames + travelFrames;
+            var expectedGameFrames = (shotsForKill - 1)*sourceEntity.ReloadFrames + travelFrames;
 
 
             for (var i = 0; !game.GameEnded; i++)
@@ -106,52 +130,22 @@
         [Test]
         public void InvalidActionDetected()
         {
-            var game = new DummyGame(new[] { new DummyUser(true, 0), new DummyUser(true, 1) }, TestGameSettings);
-            game.AddGameAction(game.Users.FirstOrDefault(), new GameAction((GameActionType)1337, new Vector2(0, 0), game.ValidEntities.First().EntityIdentifier));
+            var game = new DummyGame(new[] {new DummyUser(true, 0), new DummyUser(true, 1)}, TestGameSettings);
+            game.AddGameAction(game.Users.FirstOrDefault(), new GameAction((GameActionType) 1337, new Vector2(0, 0), game.ValidEntities.First().EntityIdentifier));
             Assert.Throws<TestGameException>(() => game.DoNextTurn(), "Game doesn't properly validate game action");
-        }
-
-        [Test]
-        public void ProjectilesDespawn()
-        {
-            var game = new DummyGame(new[] { new DummyUser(true, 0) }, TestGameSettings);
-            var entity = game.ValidEntitesControllable.First();
-            entity.Shoot(entity.Position + new Vector2(100, 0));
-            var despawnTurn = (int)Math.Ceiling(game.Settings.ProjectileLifeTimeSec / game.TimePerFrameSec);
-
-            Assert.Greater(game.Settings.ProjectileLifeTimeSec, 0);
-
-            while (game.Turn < despawnTurn)
-                game.DoNextTurn();
-
-            Assert.AreEqual(1, game.ValidProjectiles.Count(), "Projectile despawned too early");
-            Assert.AreEqual(game.ValidProjectiles.First().DespawnTurn, despawnTurn, "Projectile DespawnTurn api does not work");
-
-            game.DoNextTurn();
-
-            Assert.AreEqual(0, game.ValidProjectiles.Count(), "Projectile not despawning / despawning too late");
-        }
-
-        [Test]
-        public void ZeroDistanceShotDetected()
-        {
-            var game = new DummyGame(new[] { new DummyUser(true, 0), new DummyUser(true, 1) }, TestGameSettings);
-            var entity = game.ValidEntitesControllable.First();
-            entity.Shoot(entity.Position);
-            Assert.Throws<TestGameException>(() => game.DoNextTurn(), "Can shoot at my position (could cause invalid unit vector)");
         }
 
         [Test]
         public void ProjectilesDealAreaDamage()
         {
-            var game = new DummyGame(new[] { new DummyUser(true, 0), new DummyUser(true, 1) }, TestGameSettings);
+            var game = new DummyGame(new[] {new DummyUser(true, 0), new DummyUser(true, 1)}, TestGameSettings);
             var entity = game.ValidEntitesControllable.First();
 
             var target = game.ValidEntities.First(ent => ent.EntityIdentifier != entity.EntityIdentifier);
             Assert.AreNotEqual(entity, target, "wtf");
 
             var target2 = game.AddEntity(target.Position, target.PlayerIdentifier, target.CharData);
-            Assert.AreEqual(game.ValidEntities.Count(), 3, "Invalid amount of entities in test, maybe adding the dummy entity didn't work?");
+            Assert.AreEqual(3, game.ValidEntities.Count(), "Invalid amount of entities in test, maybe adding the dummy entity didn't work?");
 
             entity.Shoot(target.Position);
 
@@ -166,6 +160,37 @@
                 }
             }
             Assert.Fail("Projectile never detonated or references not valid");
+        }
+
+        [Test]
+        public void ProjectilesDespawn()
+        {
+            var game = new DummyGame(new[] {new DummyUser(true, 0)}, TestGameSettings);
+            var entity = game.ValidEntitesControllable.First();
+            entity.Shoot(entity.Position + new Vector2(100, 0));
+            var despawnTurn = (int) Math.Ceiling(game.Settings.ProjectileLifeTimeSec/game.TimePerFrameSec);
+
+            Assert.Greater(game.Settings.ProjectileLifeTimeSec, 0);
+
+            while (game.Turn < despawnTurn)
+                game.DoNextTurn();
+
+            Assert.AreEqual(1, game.ValidProjectiles.Count(), "Projectile despawned too early");
+            Assert.AreEqual(game.ValidProjectiles.First().LifeEndTurn, despawnTurn, "Projectile LifeEndTurn is incorrect");
+            Assert.AreEqual(despawnTurn, game.Turn, "Despawn turn incorrect");
+
+            game.DoNextTurn();
+
+            Assert.AreEqual(0, game.ValidProjectiles.Count(), "Projectile not despawning / despawning too late");
+        }
+
+        [Test]
+        public void ZeroDistanceShotDetected()
+        {
+            var game = new DummyGame(new[] {new DummyUser(true, 0), new DummyUser(true, 1)}, TestGameSettings);
+            var entity = game.ValidEntitesControllable.First();
+            entity.Shoot(entity.Position);
+            Assert.Throws<TestGameException>(() => game.DoNextTurn(), "Can shoot at my position (could cause invalid unit vector)");
         }
     }
 }

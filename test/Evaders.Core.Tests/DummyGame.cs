@@ -30,7 +30,7 @@
             throw new TestGameException();
         }
 
-        protected override bool BeforeHandleAction(DummyUser @from, GameAction action)
+        protected override bool BeforeHandleAction(DummyUser from, GameAction action)
         {
             return true;
         }

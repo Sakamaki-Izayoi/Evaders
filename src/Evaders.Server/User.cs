@@ -131,7 +131,7 @@
 
         private void HandlePacket(PacketC2S packet)
         {
-            if (!Authorized && packet.Type != Packet.PacketTypeC2S.Authorize)
+            if (!Authorized && (packet.Type != Packet.PacketTypeC2S.Authorize))
             {
                 _logger.LogDebug($"{this} tried to send unauthorized packets!");
                 IllegalAction("Please authorize first!");
@@ -160,7 +160,7 @@
                             return;
                         }
 
-                        if (Login == null || Login.ToByteArray().Distinct().Count() <= 1)
+                        if ((Login == null) || (Login.ToByteArray().Distinct().Count() <= 1))
                         {
                             IllegalAction("Invalid login. The login is supposed to be a GUID of your choice (choose any, but keep that one!). It needs to be in a notation that can be parsed by this: https://msdn.microsoft.com/en-us/library/system.guid.parse(v=vs.110).aspx");
                             return;

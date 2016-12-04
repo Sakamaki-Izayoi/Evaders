@@ -22,7 +22,7 @@
                 return;
             _loaded = true;
 
-            var textures = Enum.GetNames(typeof (Texture)).ToArray();
+            var textures = Enum.GetNames(typeof(Texture)).ToArray();
             _textures = new Texture2D[textures.Length];
 
             for (var index = 0; index < textures.Length; index++)

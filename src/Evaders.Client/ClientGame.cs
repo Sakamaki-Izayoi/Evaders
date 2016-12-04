@@ -40,7 +40,7 @@
             _connection = connection;
         }
 
-        protected override void OnActionExecuted(ClientUser @from, GameAction action)
+        protected override void OnActionExecuted(ClientUser from, GameAction action)
         {
         }
 
@@ -88,23 +88,23 @@
             return Users.FirstOrDefault(user => user.Identifier == entity.PlayerIdentifier);
         }
 
-        internal void AddActionWithoutNetworking(ClientUser @from, GameAction action)
+        internal void AddActionWithoutNetworking(ClientUser from, GameAction action)
         {
-            if (@from == null)
+            if (from == null)
                 throw new ArgumentException("User cannot be null", nameof(from));
             AddActionInternal(from, action);
         }
 
-        protected override bool AddAction(ClientUser @from, GameAction action)
+        protected override bool AddAction(ClientUser from, GameAction action)
         {
-            if (!BeforeHandleAction(@from, action))
+            if (!BeforeHandleAction(from, action))
                 return false;
 
             _connection.Send(Packet.PacketTypeC2S.GameAction, action.AsLiveAction(GameIdentifier));
             return true;
         }
 
-        protected override bool BeforeHandleAction(ClientUser @from, GameAction action)
+        protected override bool BeforeHandleAction(ClientUser from, GameAction action)
         {
             return true;
         }

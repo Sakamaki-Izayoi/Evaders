@@ -6,7 +6,7 @@
 
     public class Packet
     {
-        [JsonConverter(typeof (StringEnumConverter))]
+        [JsonConverter(typeof(StringEnumConverter))]
         public enum PacketTypeC2S
         {
             Authorize,
@@ -18,7 +18,7 @@
             SwitchQueueMode
         }
 
-        [JsonConverter(typeof (StringEnumConverter))]
+        [JsonConverter(typeof(StringEnumConverter))]
         public enum PacketTypeS2C
         {
             AuthResult,

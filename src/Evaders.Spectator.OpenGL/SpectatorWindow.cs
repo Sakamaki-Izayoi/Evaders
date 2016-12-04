@@ -30,7 +30,7 @@
 
         public void Remove(Screen screen)
         {
-            while (_screens.Count > 1 && _screens.Pop() != screen)
+            while ((_screens.Count > 1) && (_screens.Pop() != screen))
             {
             }
         }
@@ -102,7 +102,7 @@
                 return;
             }
 
-            if (GamePad.GetState(PlayerIndex.One).Buttons.Back == ButtonState.Pressed || Keyboard.GetState().IsKeyDown(Keys.Escape))
+            if ((GamePad.GetState(PlayerIndex.One).Buttons.Back == ButtonState.Pressed) || Keyboard.GetState().IsKeyDown(Keys.Escape))
                 if (_screens.Count <= 1)
                     Environment.Exit(0);
                 else

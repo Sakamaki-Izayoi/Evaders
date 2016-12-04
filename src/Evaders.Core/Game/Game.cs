@@ -10,7 +10,7 @@
 
     public abstract class Game<TUser> : GameBase where TUser : IUser
     {
-        public override double TimePerFrameSec => 1d / Settings.TurnsPerSecond;
+        public override double TimePerFrameSec => 1d/Settings.TurnsPerSecond;
         public bool GameEnded => _entities.All(entity => entity.Value.PlayerIdentifier == _entities.FirstOrDefault().Value?.PlayerIdentifier);
 
         [JsonProperty]
@@ -48,11 +48,11 @@
         {
             _users = new ConcurrentDictionary<TUser, ConcurrentBag<GameAction>>(users.Select(item => new KeyValuePair<TUser, ConcurrentBag<GameAction>>(item, new ConcurrentBag<GameAction>())));
             var unitUp = new Vector2(0, -1);
-            var rotateBy = 360f / _users.Count;
+            var rotateBy = 360f/_users.Count;
             foreach (var user in _users)
             {
                 var entityIdentifier = ++_entityIdentifier;
-                _entities.TryAdd(entityIdentifier, new Entity(Settings.DefaultCharacterData, unitUp * (Settings.ArenaRadius - Settings.DefaultCharacterData.HitboxSize), user.Key.Identifier, entityIdentifier, this));
+                _entities.TryAdd(entityIdentifier, new Entity(Settings.DefaultCharacterData, unitUp*(Settings.ArenaRadius - Settings.DefaultCharacterData.HitboxSize), user.Key.Identifier, entityIdentifier, this));
                 unitUp = unitUp.RotatedDegrees(rotateBy);
             }
         }
@@ -90,7 +90,7 @@
                                 result = controlledEntity.ShootInternal(gameAction.Position);
                                 break;
                             default:
-                                OnIllegalAction(user.Key, "Unknown Action: " + (int)gameAction.Type);
+                                OnIllegalAction(user.Key, "Unknown Action: " + (int) gameAction.Type);
                                 continue;
                         }
                         if (!result)
@@ -143,7 +143,9 @@
         protected void AddActionInternal(TUser from, GameAction action)
         {
             lock (NextTurnLock)
+            {
                 _users[from].Add(action);
+            }
         }
 
         /// <summary>
@@ -155,7 +157,7 @@
         /// <returns></returns>
         protected internal virtual bool AddAction(TUser from, GameAction action)
         {
-            if (!BeforeHandleAction(@from, action))
+            if (!BeforeHandleAction(from, action))
                 return false;
 
             AddActionInternal(from, action);
@@ -173,7 +175,7 @@
         protected internal override void SpawnProjectile(Vector2 direction, EntityBase entity)
         {
             var projectileIdentifier = ++_projectileIdentifier;
-            if (!_projectiles.TryAdd(projectileIdentifier, new Projectile(direction.Unit, entity, this, projectileIdentifier, Turn + (int)Math.Ceiling(Settings.ProjectileLifeTimeSec / TimePerFrameSec))))
+            if (!_projectiles.TryAdd(projectileIdentifier, new Projectile(direction.Unit, entity, this, projectileIdentifier)))
                 throw new Exception("Could not spawn projectile with id: " + projectileIdentifier);
         }
 
@@ -190,7 +192,7 @@
 
         protected internal override void HandleDeath(EntityBase entity)
         {
-            _toRemoveEntities.Add((Entity)entity);
+            _toRemoveEntities.Add((Entity) entity);
         }
 
         protected internal override void HandleDeath(Projectile projectile)
@@ -212,7 +214,7 @@
 
         public bool HasUser(TUser user) => _users.ContainsKey(user);
 
-        protected virtual void OnActionExecuted(TUser @from, GameAction action)
+        protected virtual void OnActionExecuted(TUser from, GameAction action)
         {
         }
 
@@ -226,6 +228,6 @@
 
         protected abstract void OnIllegalAction(TUser user, string warningMsg);
 
-        protected abstract bool BeforeHandleAction(TUser @from, GameAction action);
+        protected abstract bool BeforeHandleAction(TUser from, GameAction action);
     }
 }

@@ -10,7 +10,9 @@
         public static T DeserializeEx<T>(this JsonSerializer serializer, string json)
         {
             using (var reader = new JsonTextReader(new StringReader(json)))
-                return (T) serializer.Deserialize(reader, typeof (T));
+            {
+                return (T) serializer.Deserialize(reader, typeof(T));
+            }
         }
 
         public static string SerializeEx<T>(this JsonSerializer serializer, T obj)
@@ -21,7 +23,7 @@
             {
                 jsonWriter.Formatting = serializer.Formatting;
 
-                serializer.Serialize(jsonWriter, obj, typeof (T));
+                serializer.Serialize(jsonWriter, obj, typeof(T));
             }
 
             return sw.ToString();

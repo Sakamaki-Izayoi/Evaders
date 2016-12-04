@@ -94,7 +94,7 @@
                 _zoom = MathHelper.Clamp(_zoom*scale, MinZoom, MaxZoom);
             }
 
-            if (_lastMouseState.LeftButton == ButtonState.Pressed && mouseState.LeftButton == ButtonState.Pressed)
+            if ((_lastMouseState.LeftButton == ButtonState.Pressed) && (mouseState.LeftButton == ButtonState.Pressed))
             {
                 var zoomFac = 1f/_zoom;
                 _cameraPosition += new Vector2((mouseState.X - _lastMouseState.X)*zoomFac, (mouseState.Y - _lastMouseState.Y)*zoomFac);

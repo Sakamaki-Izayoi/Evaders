@@ -1,7 +1,6 @@
 ﻿namespace ExampleBot
 {
     using System;
-    using System.Diagnostics;
     using System.Net;
     using Evaders.Client;
     using Microsoft.Extensions.Logging;

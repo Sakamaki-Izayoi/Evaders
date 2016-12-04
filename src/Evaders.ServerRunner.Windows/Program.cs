@@ -21,7 +21,7 @@
                 throw new NotImplementedException();
 #pragma warning disable 162
                 ServiceBase[] ServicesToRun;
-                ServicesToRun = new ServiceBase[] { };
+                ServicesToRun = new ServiceBase[] {};
                 ServiceBase.Run(ServicesToRun);
                 return;
 #pragma warning restore 162

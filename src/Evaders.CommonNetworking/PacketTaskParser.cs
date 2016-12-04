@@ -27,7 +27,7 @@
         {
             lock (_jsonBuilder)
             {
-                if (socketAsyncEventArgs.BytesTransferred < 5 && _jsonBuilder.Length == 0)
+                if ((socketAsyncEventArgs.BytesTransferred < 5) && (_jsonBuilder.Length == 0))
                 {
                     if (socketAsyncEventArgs.BytesTransferred == 4)
                     {
@@ -47,7 +47,7 @@
                     if (_waitingMsgLength == null)
                     {
                         _waitingMsgLength = BitConverter.ToUInt32(socketAsyncEventArgs.Buffer, currentOffset);
-                        currentOffset += sizeof (uint);
+                        currentOffset += sizeof(uint);
                     }
 
                     var count = (int) Math.Min(socketAsyncEventArgs.BytesTransferred - (currentOffset - socketAsyncEventArgs.Offset), _waitingMsgLength.Value - _builderByteLength);

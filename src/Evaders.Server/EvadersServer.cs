@@ -2,9 +2,7 @@
 {
     using System;
     using System.Collections.Concurrent;
-    using System.Collections.Generic;
     using System.Linq;
-    using System.Net;
     using System.Net.Sockets;
     using System.Threading;
     using CommonNetworking;
@@ -13,7 +11,6 @@
     using Integration;
     using JetBrains.Annotations;
     using Microsoft.Extensions.Logging;
-    using Payloads;
 
     public class EvadersServer : IServer, IRulesProvider
     {
@@ -22,13 +19,13 @@
         private readonly ServerSettings _config;
         private readonly ConcurrentDictionary<IServerUser, DateTime> _connectedUsers = new ConcurrentDictionary<IServerUser, DateTime>();
         private readonly ILogger _logger;
-        private readonly ConcurrentDictionary<long, ServerGame> _runningGames = new ConcurrentDictionary<long, ServerGame>();
-        private EasyTaskSocket _serverSocket;
-        private readonly IProviderFactory<IServerSupervisor> _supervisorFactory;
-        private readonly IProviderFactory<GameSettings> _settingsFactory;
-        private long _gameIdentifier;
-        private long _userIdentifier;
         private readonly ConcurrentDictionary<string, IMatchmaking> _matchmaking;
+        private readonly ConcurrentDictionary<long, ServerGame> _runningGames = new ConcurrentDictionary<long, ServerGame>();
+        private readonly IProviderFactory<GameSettings> _settingsFactory;
+        private readonly IProviderFactory<IServerSupervisor> _supervisorFactory;
+        private long _gameIdentifier;
+        private EasyTaskSocket _serverSocket;
+        private long _userIdentifier;
 
 
         public EvadersServer([NotNull] IProviderFactory<IServerSupervisor> supervisorFactoryFactory, [NotNull] IProviderFactory<GameSettings> settingsFactory, [NotNull] IProviderFactory<IMatchmaking> matchmakingFactory, [NotNull] ILogger logger, [NotNull] ServerSettings config)
@@ -59,29 +56,12 @@
             _config = config;
         }
 
-        public void Start()
-        {
-            if (_serverSocket != null)
-                throw new InvalidOperationException("You can only start the server once");
-
-            _logger.LogInformation("Setting up tcp accept socket");
-            var listener = new TcpListener(_config.IP, _config.Port);
-            listener.Start();
-            _serverSocket = new EasyTaskSocket(listener.Server);
-            _serverSocket.OnAccepted += OnClientConnected;
-
-            if (!_serverSocket.StartJobs(EasyTaskSocket.SocketTasks.Accept))
-                throw new Exception("Could not start network jobs");
-
-            _logger.LogInformation("Server online!");
-        }
-
-        void IServer.HandleUserAction(IServerUser @from, LiveGameAction action)
+        void IServer.HandleUserAction(IServerUser from, LiveGameAction action)
         {
             ServerGame game;
             if (!_runningGames.TryGetValue(action.GameIdentifier, out game))
             {
-                @from.IllegalAction("You cannot take action in a game you don't even play in!");
+                from.IllegalAction("You cannot take action in a game you don't even play in!");
                 return;
             }
 
@@ -93,7 +73,7 @@
         {
             lock (_connectedUsers)
             {
-                existingUser = _connectedUsers.FirstOrDefault(item => item.Key.Login == login && item.Key != connectingUser).Key;
+                existingUser = _connectedUsers.FirstOrDefault(item => (item.Key.Login == login) && (item.Key != connectingUser)).Key;
                 return existingUser != null;
             }
         }
@@ -135,23 +115,6 @@
 
                 user.Send(Packet.PacketTypeS2C.QueueState, regCount);
             }
-        }
-
-        private IMatchmaking GetMatchmaking(IServerUser user, QueueAction action)
-        {
-            if (action.Count <= 0)
-            {
-                user.IllegalAction("Invalid queue count");
-                return null;
-            }
-
-            IMatchmaking matchmaking;
-            if (!_matchmaking.TryGetValue(action.GameMode, out matchmaking))
-            {
-                user.IllegalAction("There is no such gamemode");
-                return null;
-            }
-            return matchmaking;
         }
 
         void IServer.HandleUserLeaveQueue(IServerUser user, QueueAction action)
@@ -220,6 +183,40 @@
         public string[] GetGameModes()
         {
             return _config.GameModes;
+        }
+
+        public void Start()
+        {
+            if (_serverSocket != null)
+                throw new InvalidOperationException("You can only start the server once");
+
+            _logger.LogInformation("Setting up tcp accept socket");
+            var listener = new TcpListener(_config.IP, _config.Port);
+            listener.Start();
+            _serverSocket = new EasyTaskSocket(listener.Server);
+            _serverSocket.OnAccepted += OnClientConnected;
+
+            if (!_serverSocket.StartJobs(EasyTaskSocket.SocketTasks.Accept))
+                throw new Exception("Could not start network jobs");
+
+            _logger.LogInformation("Server online!");
+        }
+
+        private IMatchmaking GetMatchmaking(IServerUser user, QueueAction action)
+        {
+            if (action.Count <= 0)
+            {
+                user.IllegalAction("Invalid queue count");
+                return null;
+            }
+
+            IMatchmaking matchmaking;
+            if (!_matchmaking.TryGetValue(action.GameMode, out matchmaking))
+            {
+                user.IllegalAction("There is no such gamemode");
+                return null;
+            }
+            return matchmaking;
         }
 
         private void OnClientConnected(object sender, SocketAsyncEventArgs socketAsyncEventArgs)
