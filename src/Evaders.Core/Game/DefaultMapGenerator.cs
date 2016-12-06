@@ -23,8 +23,9 @@ namespace Evaders.Core.Game
 
         public IEnumerable<Vector2> GetHealorbPositions(int entityCount, GameSettings settings)
         {
+            entityCount *= 3;
             var unitUp = new Vector2(0, -1);
-            var rotateBy = 360f / (entityCount * 3);
+            var rotateBy = 360f / (entityCount);
             for (var i = 0; i < entityCount; i++)
             {
                 yield return unitUp * (settings.ArenaRadius / 2 - settings.DefaultCharacterData.HitboxSize);
