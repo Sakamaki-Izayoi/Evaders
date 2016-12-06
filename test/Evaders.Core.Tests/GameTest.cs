@@ -192,5 +192,72 @@
             entity.Shoot(entity.Position);
             Assert.Throws<TestGameException>(() => game.DoNextTurn(), "Can shoot at my position (could cause invalid unit vector)");
         }
+
+        [Test]
+        public void HealingOrbs()
+        {
+            var game = new DummyGame(new[] { new DummyUser(true, 0) }, TestGameSettings);
+            var entity = game.ValidEntitesControllable.First();
+
+            Assert.Greater(game.HealSpawns.Count(), 0, "No healing spawn points");
+            var firstSpawn = game.HealSpawns.First();
+            Assert.Less(firstSpawn.NextSpawnTurn, ushort.MaxValue, $"Either {firstSpawn.NextSpawnTurn} is not working as intended or the settings are shit (heal takes a very long time to spawn)");
+
+            for (var i = 0; i <= firstSpawn.NextSpawnTurn; i++)
+            {
+                if (game.HealSpawns.All(item => item.IsUp))
+                {
+                    entity.MoveTo(firstSpawn.Position);
+
+                    do
+                    {
+                        if (entity.Health > entity.CharData.MaxHealth)
+                        {
+                            Assert.Fail("Entity is already healed before walking to heal or heal instantly spawns - bad spawn position / map gen ?");
+                        }
+                        game.DoNextTurn();
+                    } while (firstSpawn.IsUp);
+                    Assert.AreEqual(firstSpawn.HealAmount + entity.CharData.MaxHealth, entity.Health, "Healing more or less than specified");
+
+                    return;
+                }
+                game.DoNextTurn();
+            }
+            Assert.Fail($"Either {firstSpawn.NextSpawnTurn} is not working as intended or heals never spawn or Entity could not reach");
+        }
+
+        [Test]
+        public void CloneOrbs()
+        {
+            var game = new DummyGame(new[] { new DummyUser(true, 1337), new DummyUser(true, 420) }, TestGameSettings);
+            var entity = game.ValidEntitesControllable.First();
+
+            Assert.NotNull(game.ClonerSpawn, $"{nameof(game.ClonerSpawn)} is null");
+            var cloneSpawn = game.ClonerSpawn;
+            Assert.Less(cloneSpawn.NextSpawnTurn, ushort.MaxValue, $"Either {nameof(cloneSpawn.NextSpawnTurn)} is not working as intended or the settings are shit (heal takes a very long time to spawn)");
+
+            for (var i = 0; i <= cloneSpawn.NextSpawnTurn; i++)
+            {
+                if (cloneSpawn.IsUp)
+                {
+                    entity.MoveTo(cloneSpawn.Position);
+
+                    do
+                    {
+                        Assert.AreEqual(2, game.Entities.Count(), "Entity is already cloned before walking to clone orb - bad spawn position / map gen ?");
+                        game.DoNextTurn();
+                    } while (cloneSpawn.IsUp);
+
+                    Assert.AreEqual(3, game.Entities.Count(), "Did not clone entity");
+                    Assert.AreNotEqual(game.Entities.First().EntityIdentifier, game.Entities.Last().EntityIdentifier, "Equal entity identifier (cloned)");
+                    Assert.AreEqual(game.Entities.First().PlayerIdentifier, game.Entities.Last().PlayerIdentifier, "Cloned entity for other player");
+                    Assert.Less(game.Entities.First().Position.Distance(game.Entities.Last().Position), 1, "Clone position not equal");
+
+                    return;
+                }
+                game.DoNextTurn();
+            }
+            Assert.Fail($"Either {nameof(cloneSpawn.NextSpawnTurn)} is not working as intended or clone orb never spawn or Entity could not reach");
+        }
     }
 }
