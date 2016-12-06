@@ -4,9 +4,9 @@
 
     public abstract class DefaultSandboxGame<TUser> : Game<TUser> where TUser : IUser
     {
-        public IEnumerable<Entity> ValidEntitesControllable => Entities;
+        public IEnumerable<Entity> ValidEntitesControllable => EntitiesInternal;
 
-        protected DefaultSandboxGame(IEnumerable<TUser> users, GameSettings settings) : base(users, settings)
+        protected DefaultSandboxGame(IEnumerable<TUser> users, GameSettings settings) : base(users, settings, new DefaultMapGenerator())
         {
         }
     }

@@ -6,55 +6,72 @@
     using System.Linq;
     using System.Runtime.Serialization;
     using Newtonsoft.Json;
+    using Newtonsoft.Json.Serialization;
     using Utility;
 
     public abstract class Game<TUser> : GameBase where TUser : IUser
     {
-        public override double TimePerFrameSec => 1d/Settings.TurnsPerSecond;
+        public override double TimePerFrameSec => 1d / Settings.TurnsPerSecond;
         public bool GameEnded => _entities.All(entity => entity.Value.PlayerIdentifier == _entities.FirstOrDefault().Value?.PlayerIdentifier);
 
         [JsonProperty]
         public IEnumerable<TUser> Users => _users.Keys;
 
-        public override IEnumerable<EntityBase> ValidEntities => _entities.Values;
-        public override IEnumerable<Projectile> ValidProjectiles => _projectiles.Values;
+        [JsonProperty]
+        public override IEnumerable<EntityBase> Entities => _entities.Values;
 
         [JsonProperty]
-        protected IEnumerable<Entity> Entities => _entities.Values;
+        public override IEnumerable<Projectile> Projectiles => _projectiles.Values;
 
         [JsonProperty]
-        protected IEnumerable<Projectile> Projectiles => _projectiles.Values;
+        public override IEnumerable<HealOrbSpawn> HealSpawns => _healOrbs;
+
+        [JsonProperty]
+        public override CloneOrbSpawn ClonerSpawn => _clonerSpawn;
+
+        protected IEnumerable<Entity> EntitiesInternal => _entities.Values;
 
         private readonly ConcurrentDictionary<long, Entity> _entities = new ConcurrentDictionary<long, Entity>();
         private readonly ConcurrentDictionary<long, Projectile> _projectiles = new ConcurrentDictionary<long, Projectile>();
+        private readonly HealOrbSpawn[] _healOrbs;
+        private readonly CloneOrbSpawn _clonerSpawn;
 
         private readonly List<Entity> _toRemoveEntities = new List<Entity>();
         private readonly List<Projectile> _toRemoveProjectiles = new List<Projectile>();
         private readonly ConcurrentDictionary<TUser, ConcurrentBag<GameAction>> _users;
         protected readonly object NextTurnLock = new object();
-        private long _entityIdentifier;
 
+        [JsonProperty("LastEntityIdentifier")]
+        private long _entityIdentifier;
+        [JsonProperty("LastProjectileIdentifier")]
         private long _projectileIdentifier;
 
-
-        protected Game(IEnumerable<TUser> users, GameSettings settings, IEnumerable<Entity> entities, IEnumerable<Projectile> projectiles) : base(settings)
+        protected Game(IEnumerable<TUser> users, GameSettings settings, IEnumerable<Entity> entities, IEnumerable<Projectile> projectiles, IEnumerable<HealOrbSpawn> healSpawns, CloneOrbSpawn clonerSpawn, long lastEntityIdentifier, long lastProjectileIdentifier) : base(settings)
         {
             _users = new ConcurrentDictionary<TUser, ConcurrentBag<GameAction>>(users.Select(item => new KeyValuePair<TUser, ConcurrentBag<GameAction>>(item, new ConcurrentBag<GameAction>())));
             _entities = new ConcurrentDictionary<long, Entity>(entities.Select(item => new KeyValuePair<long, Entity>(item.EntityIdentifier, item)));
             _projectiles = new ConcurrentDictionary<long, Projectile>(projectiles.Select(item => new KeyValuePair<long, Projectile>(item.ProjectileIdentifier, item)));
+            _healOrbs = healSpawns.ToArray();
+            _clonerSpawn = clonerSpawn;
+            _entityIdentifier = lastEntityIdentifier;
+            _projectileIdentifier = lastProjectileIdentifier;
         }
 
-        protected Game(IEnumerable<TUser> users, GameSettings settings) : base(settings)
+        protected Game(IEnumerable<TUser> users, GameSettings settings, IMapGenerator generator) : base(settings)
         {
             _users = new ConcurrentDictionary<TUser, ConcurrentBag<GameAction>>(users.Select(item => new KeyValuePair<TUser, ConcurrentBag<GameAction>>(item, new ConcurrentBag<GameAction>())));
-            var unitUp = new Vector2(0, -1);
-            var rotateBy = 360f/_users.Count;
-            foreach (var user in _users)
+            using (var enumerator = generator.GetEntityPositions(_users.Count, settings).GetEnumerator())
             {
-                var entityIdentifier = ++_entityIdentifier;
-                _entities.TryAdd(entityIdentifier, new Entity(Settings.DefaultCharacterData, unitUp*(Settings.ArenaRadius - Settings.DefaultCharacterData.HitboxSize), user.Key.Identifier, entityIdentifier, this));
-                unitUp = unitUp.RotatedDegrees(rotateBy);
+                foreach (var user in _users)
+                {
+                    if (!enumerator.MoveNext()) throw new Exception("Map generator returns less positions than requested");
+
+                    var entityIdentifier = ++_entityIdentifier;
+                    _entities.TryAdd(entityIdentifier, new Entity(Settings.DefaultCharacterData, enumerator.Current, user.Key.Identifier, entityIdentifier, this));
+                }
             }
+            _healOrbs = generator.GetHealorbPositions(_entities.Count, settings).Select(item => new HealOrbSpawn(this, item)).ToArray();
+            _clonerSpawn = new CloneOrbSpawn(this, Vector2.Zero);
         }
 
         protected void NextTurn()
@@ -90,7 +107,7 @@
                                 result = controlledEntity.ShootInternal(gameAction.Position);
                                 break;
                             default:
-                                OnIllegalAction(user.Key, "Unknown Action: " + (int) gameAction.Type);
+                                OnIllegalAction(user.Key, "Unknown Action: " + (int)gameAction.Type);
                                 continue;
                         }
                         if (!result)
@@ -105,6 +122,10 @@
                 foreach (var projectile in _projectiles)
                     projectile.Value.UpdateMovement();
 
+                foreach (var healOrbSpawn in _healOrbs)
+                    healOrbSpawn.Update();
+
+                _clonerSpawn.Update();
 
                 foreach (var entity in _entities)
                     entity.Value.UpdateCombat();
@@ -179,7 +200,7 @@
                 throw new Exception("Could not spawn projectile with id: " + projectileIdentifier);
         }
 
-        protected Entity SpawnEntity(Vector2 position, long playerIdentifier, CharacterData charData)
+        protected internal override Entity SpawnEntity(Vector2 position, long playerIdentifier, CharacterData charData)
         {
             var entityIdentifier = ++_entityIdentifier;
             var entity = new Entity(charData, position, playerIdentifier, entityIdentifier, this);
@@ -188,11 +209,25 @@
             return entity;
         }
 
+        public EntityBase GetEntityById(long entityIdentifier)
+        {
+            Entity entity;
+            _entities.TryGetValue(entityIdentifier, out entity);
+            return entity;
+        }
+
+        public Projectile GetProjectileById(long projectileIdentifier)
+        {
+            Projectile projectile;
+            _projectiles.TryGetValue(projectileIdentifier, out projectile);
+            return projectile;
+        }
+
         internal TUser GetUser(long userIdentifier) => _users.Keys.FirstOrDefault(item => item.Identifier == userIdentifier);
 
         protected internal override void HandleDeath(EntityBase entity)
         {
-            _toRemoveEntities.Add((Entity) entity);
+            _toRemoveEntities.Add((Entity)entity);
         }
 
         protected internal override void HandleDeath(Projectile projectile)
@@ -209,6 +244,10 @@
                     entity.Value.Game = this;
                 foreach (var projectile in _projectiles)
                     projectile.Value.Game = this;
+                foreach (var healOrbSpawn in HealSpawns)
+                    healOrbSpawn.Game = this;
+                ClonerSpawn.Game = this;
+
             }
         }
 

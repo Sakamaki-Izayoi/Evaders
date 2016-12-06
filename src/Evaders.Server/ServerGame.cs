@@ -163,7 +163,7 @@
             if (Users.All(usr => !usr.Connected))
                 return;
 
-            var winner = ValidEntities.Any() ? Users.First(usr => usr.Identifier == ValidEntities.First().PlayerIdentifier) : null;
+            var winner = Entities.Any() ? Users.First(usr => usr.Identifier == Entities.First().PlayerIdentifier) : null;
             foreach (var serverUser in Users)
                 serverUser.Send(Packet.PacketTypeS2C.GameEnd, new GameEnd(GameIdentifier, Users.ToArray(), serverUser.Identifier == winner?.Identifier, winner));
             if (winner == null)

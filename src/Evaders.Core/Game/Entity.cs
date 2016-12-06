@@ -1,13 +1,17 @@
 ﻿namespace Evaders.Core.Game
 {
     using System;
+    using Newtonsoft.Json;
     using Utility;
 
     public class Entity : EntityBase
     {
-        public Entity(CharacterData charData, Vector2 position, long playerIdentifier, long entityIdentifier, GameBase game) : base(charData, position, playerIdentifier, entityIdentifier, game)
+        internal Entity(CharacterData charData, Vector2 position, long playerIdentifier, long entityIdentifier, GameBase game) : base(charData, position, playerIdentifier, entityIdentifier, game)
         {
         }
+
+        [JsonConstructor]
+        protected Entity(CharacterData charData) : base(charData) { }
 
         public void MoveTo(Vector2 coord)
         {

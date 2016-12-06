@@ -8,7 +8,8 @@
     public enum Texture
     {
         Circle,
-        Pixel
+        Pixel,
+        Star
     }
 
     public static class TextureManager

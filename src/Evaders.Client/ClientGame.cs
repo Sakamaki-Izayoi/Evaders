@@ -13,15 +13,15 @@
         public event Action OnGameEnded;
         public event EventHandler<MessageEventArgs> OnServerRejectedAction;
         public event EventHandler<GameEventArgs> OnWaitingForActions;
-        public IEnumerable<Entity> MyEntities => Entities.Where(entity => entity.PlayerIdentifier == _myPlayerIdentifier);
-        public IEnumerable<EntityBase> EnemyEntities => Entities.Where(entity => entity.PlayerIdentifier != _myPlayerIdentifier);
-        public IEnumerable<Projectile> EnemyProjectiles => ValidProjectiles.Where(projectile => projectile.PlayerIdentifier != _myPlayerIdentifier);
-        public IEnumerable<Projectile> MyProjectiles => ValidProjectiles.Where(projectile => projectile.PlayerIdentifier == _myPlayerIdentifier);
+        public IEnumerable<Entity> MyEntities => EntitiesInternal.Where(entity => entity.PlayerIdentifier == _myPlayerIdentifier);
+        public IEnumerable<EntityBase> EnemyEntities => EntitiesInternal.Where(entity => entity.PlayerIdentifier != _myPlayerIdentifier);
+        public IEnumerable<Projectile> EnemyProjectiles => Projectiles.Where(projectile => projectile.PlayerIdentifier != _myPlayerIdentifier);
+        public IEnumerable<Projectile> MyProjectiles => Projectiles.Where(projectile => projectile.PlayerIdentifier == _myPlayerIdentifier);
         public long GameIdentifier { get; private set; }
         private Connection _connection;
         private long _myPlayerIdentifier;
 
-        internal ClientGame(IEnumerable<ClientUser> users, GameSettings settings, Connection connection, long myPlayerIdentifier, long gameIdentifier) : base(users, settings)
+        internal ClientGame(IEnumerable<ClientUser> users, GameSettings settings, IMapGenerator generator, Connection connection, long myPlayerIdentifier, long gameIdentifier) : base(users, settings, generator)
         {
             _connection = connection;
             _myPlayerIdentifier = myPlayerIdentifier;
@@ -29,7 +29,7 @@
         }
 
         [JsonConstructor]
-        private ClientGame(IEnumerable<ClientUser> users, GameSettings settings, IEnumerable<Entity> entities, IEnumerable<Projectile> projectiles) : base(users, settings, entities, projectiles)
+        private ClientGame(IEnumerable<ClientUser> users, GameSettings settings, IEnumerable<Entity> entities, IEnumerable<Projectile> projectiles, IEnumerable<HealOrbSpawn> healSpawns, CloneOrbSpawn clonerSpawn, long lastEntityIdentifier, long lastProjectileIdentifier) : base(users, settings, entities, projectiles, healSpawns, clonerSpawn, lastEntityIdentifier, lastProjectileIdentifier)
         {
         }
 
@@ -82,7 +82,7 @@
 
         internal ClientUser GetOwnerOfEntity(long entityIdentifier)
         {
-            var entity = Entities.FirstOrDefault(item => item.EntityIdentifier == entityIdentifier);
+            var entity = EntitiesInternal.FirstOrDefault(item => item.EntityIdentifier == entityIdentifier);
             if (entity == null)
                 return null;
             return Users.FirstOrDefault(user => user.Identifier == entity.PlayerIdentifier);
