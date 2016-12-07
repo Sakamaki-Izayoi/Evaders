@@ -12,6 +12,7 @@
         public int MaxUsernameLength { get; set; } = 20;
         public string Motd { get; set; } = "Welcome :)";
         public ushort Port { get; set; } = 9090;
+        public ushort BSONPort { get; set; } = 9091;
         public string[] GameModes { get; set; } = {"Default"};
     }
 }

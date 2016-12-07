@@ -4,6 +4,7 @@
     using System.Collections.Concurrent;
     using System.Linq;
     using System.Net.Sockets;
+    using System.Text;
     using System.Threading;
     using CommonNetworking;
     using CommonNetworking.CommonPayloads;
@@ -16,6 +17,7 @@
     {
         public int MaxUsernameLength => _config.MaxUsernameLength;
         public bool ServerListening => _serverSocket.IsBound && !_serverSocket.Stopped;
+        public bool BsonServerListening => _serverSocketBson.IsBound && !_serverSocketBson.Stopped;
         private readonly ServerSettings _config;
         private readonly ConcurrentDictionary<IServerUser, DateTime> _connectedUsers = new ConcurrentDictionary<IServerUser, DateTime>();
         private readonly ILogger _logger;
@@ -25,6 +27,7 @@
         private readonly IProviderFactory<IServerSupervisor> _supervisorFactory;
         private long _gameIdentifier;
         private EasyTaskSocket _serverSocket;
+        private EasyTaskSocket _serverSocketBson;
         private long _userIdentifier;
 
 
@@ -187,20 +190,29 @@
 
         public void Start()
         {
-            if (_serverSocket != null)
+            if (_serverSocket != null || _serverSocketBson != null)
                 throw new InvalidOperationException("You can only start the server once");
 
             _logger.LogInformation("Setting up tcp accept socket");
-            var listener = new TcpListener(_config.IP, _config.Port);
-            listener.Start();
-            _serverSocket = new EasyTaskSocket(listener.Server);
-            _serverSocket.OnAccepted += OnClientConnected;
 
-            if (!_serverSocket.StartJobs(EasyTaskSocket.SocketTasks.Accept))
+            var listener = new TcpListener(_config.IP, _config.Port);
+            var listenerBson = new TcpListener(_config.IP, _config.BSONPort);
+
+            listener.Start();
+            listenerBson.Start();
+
+            _serverSocket = new EasyTaskSocket(listener.Server);
+            _serverSocketBson = new EasyTaskSocket(listenerBson.Server);
+
+            _serverSocket.OnAccepted += OnClientConnectedJson;
+            _serverSocketBson.OnAccepted += OnClientConnectedBson;
+
+            if (!_serverSocket.StartJobs(EasyTaskSocket.SocketTasks.Accept) || !_serverSocketBson.StartJobs(EasyTaskSocket.SocketTasks.Accept))
                 throw new Exception("Could not start network jobs");
 
             _logger.LogInformation("Server online!");
         }
+
 
         private IMatchmaking GetMatchmaking(IServerUser user, QueueAction action)
         {
@@ -219,11 +231,19 @@
             return matchmaking;
         }
 
-        private void OnClientConnected(object sender, SocketAsyncEventArgs socketAsyncEventArgs)
+        private void OnClientConnectedJson(object sender, SocketAsyncEventArgs socketAsyncEventArgs)
         {
             lock (_connectedUsers)
             {
-                _connectedUsers.TryAdd(new User(socketAsyncEventArgs.AcceptSocket, _logger, this, this), DateTime.Now);
+                _connectedUsers.TryAdd(new User(socketAsyncEventArgs.AcceptSocket, _logger, this, this, new PacketTaskParser<PacketC2S>(_logger, Encoding.Unicode)), DateTime.Now);
+            }
+        }
+
+        private void OnClientConnectedBson(object sender, SocketAsyncEventArgs socketAsyncEventArgs)
+        {
+            lock (_connectedUsers)
+            {
+                _connectedUsers.TryAdd(new User(socketAsyncEventArgs.AcceptSocket, _logger, this, this, new PacketTaskParserBson<PacketC2S>(_logger)), DateTime.Now);
             }
         }
 

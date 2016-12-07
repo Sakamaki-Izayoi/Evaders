@@ -12,7 +12,7 @@
 
         public ConnectionContext(IPAddress address, ushort port, IContextManager manager) : base(manager)
         {
-            Connection = new Connection(Guid.NewGuid(), "nin0", address, port, new ConsoleLogger("console", (m, lvl) => lvl >= LogLevel.Information, true));
+            Connection = Connection.ConnectBson(Guid.NewGuid(), "nin0", address, port, new ConsoleLogger("console", (m, lvl) => lvl >= LogLevel.Information, true));
             Connection.OnLoggedIn += (sender, args) =>
             {
                 Console.WriteLine("SERVER: " + args.Motd);

@@ -34,16 +34,16 @@
         private readonly IRulesProvider _rules;
         private readonly IServer _server;
 
-        private PacketParser _packetParser;
+        private PacketParser<PacketC2S> _packetParser;
         private EasyTaskSocket _socket;
 
-        public User(Socket socket, ILogger logger, IServer server, IRulesProvider rules)
+        public User(Socket socket, ILogger logger, IServer server, IRulesProvider rules, PacketParser<PacketC2S> packetParser)
         {
             _logger = logger;
             _server = server;
             _rules = rules;
-            _packetParser = new PacketParser(logger, Encoding.Unicode);
-            _packetParser.OnReceivedJson += OnPacket;
+            _packetParser = packetParser;
+            _packetParser.OnReceived += HandlePacket;
             SetupSocket(socket);
         }
 
@@ -85,11 +85,6 @@
             _socket.Dispose();
         }
 
-        private void OnPacket(string json)
-        {
-            HandlePacket(JsonNet.Deserialize<PacketC2S>(json));
-        }
-
         private void SetupSocket(Socket socket)
         {
             _socket = new EasyTaskSocket(socket);
@@ -110,7 +105,7 @@
                 return;
             }
 
-            var payload = Encoding.Unicode.GetBytes(JsonNet.Serialize(packetS2C));
+            var payload = _packetParser.FromPacket(packetS2C);
             using (var memStream = new MemoryStream())
             {
                 var writer = new BinaryWriter(memStream);
@@ -139,7 +134,7 @@
             }
             _logger.LogDebug($"{this} sent packet: {packet.Type}");
 
-            switch ((Packet.PacketTypeC2S) packet.TypeNum)
+            switch ((Packet.PacketTypeC2S)packet.TypeNum)
             {
                 case Packet.PacketTypeC2S.Authorize:
                     lock (_authLock)
