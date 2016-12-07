@@ -6,7 +6,7 @@
     using Microsoft.AspNetCore.Mvc;
     using Microsoft.Extensions.Logging;
     using Models;
-    using Models.ManageViewModels;
+    using Models.ViewModels.Manage;
 
     [Authorize]
     public class ManageController : Controller

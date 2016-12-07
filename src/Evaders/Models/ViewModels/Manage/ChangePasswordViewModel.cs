@@ -1,4 +1,4 @@
-﻿namespace Evaders.Models.ManageViewModels
+﻿namespace Evaders.Models.ViewModels.Manage
 {
     using System.ComponentModel.DataAnnotations;
 

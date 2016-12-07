@@ -6,7 +6,7 @@
     using Microsoft.AspNetCore.Mvc;
     using Microsoft.Extensions.Logging;
     using Models;
-    using Models.AccountViewModels;
+    using Models.ViewModels.Account;
 
     [Authorize]
     public class AccountController : Controller
