@@ -1,0 +1,23 @@
+﻿{
+  /* game specific settings */
+  "game": {
+    "modes": [ "default" ]
+  },
+
+  /* general settings */
+  "general": {
+    "motd": "Hellow",
+    "maxUsernameLength": 15
+  },
+
+  /* networking specific settings */
+  "networking": {
+    "ip": "0.0.0.0",
+    "port": "9090"
+  },
+  
+  /* queue specific settings */
+  "queue": {
+    "maxTime": 15.0
+  }
+}
