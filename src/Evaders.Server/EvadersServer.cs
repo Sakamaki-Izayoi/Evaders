@@ -120,7 +120,7 @@
                     matchmaking.EnterQueue(user);
             }
 
-            user.Send(Packet.PacketTypeS2C.QueueState, regCount);
+            user.Send(Packet.PacketTypeS2C.QueueState, new QueueState(action.GameMode, regCount));
 
         }
 
@@ -141,7 +141,7 @@
                         matchmaking.LeaveQueue(user);
             }
 
-            user.Send(Packet.PacketTypeS2C.QueueState, Math.Max(0, regCount - action.Count));
+            user.Send(Packet.PacketTypeS2C.QueueState, new QueueState(action.GameMode, Math.Max(0, regCount - action.Count)));
 
         }
 

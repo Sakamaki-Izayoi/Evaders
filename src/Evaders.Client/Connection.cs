@@ -16,7 +16,7 @@
 
     public class Connection : IQueuer, IGameProvider
     {
-        event EventHandler<CountChangedEventArgs> IQueuer.OnServersideQueueCountChanged
+        event EventHandler<QueueChangedEventArgs> IQueuer.OnServersideQueueCountChanged
         {
             add
             {
@@ -52,7 +52,7 @@
             }
         }
 
-        private event EventHandler<CountChangedEventArgs> OnServersideQueueCountChangedInternal;
+        private event EventHandler<QueueChangedEventArgs> OnServersideQueueCountChangedInternal;
         private event EventHandler<GameEventArgs> OnJoinedGameInternal;
         private event EventHandler<GameEventArgs> OnLeftGameInternal;
 
@@ -65,7 +65,6 @@
         private readonly EasySocket _easySocket;
         private readonly Dictionary<long, ClientGame> _games = new Dictionary<long, ClientGame>();
         private readonly ILogger _logger;
-        private int _lastQueueCount;
         private PacketParser<PacketS2C> _packetParser;
 
         public Connection(Guid identifier, string displayName, IPAddress serverAddr, ushort serverPort, PacketParser<PacketS2C> parser, ILogger logger)
@@ -209,8 +208,8 @@
                     }
                     break;
                 case Packet.PacketTypeS2C.QueueState:
-                    var args = new CountChangedEventArgs(packet.GetPayload<int>());
-                    _lastQueueCount = args.Count;
+                    var queueState = packet.GetPayload<QueueState>();
+                    var args = new QueueChangedEventArgs(queueState);
                     OnServersideQueueCountChangedInternal?.Invoke(this, args);
                     break;
                 default:

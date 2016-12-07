@@ -4,7 +4,7 @@
 
     public interface IQueuer
     {
-        event EventHandler<CountChangedEventArgs> OnServersideQueueCountChanged;
+        event EventHandler<QueueChangedEventArgs> OnServersideQueueCountChanged;
         event EventHandler<GameEventArgs> OnJoinedGame;
         event EventHandler<GameEventArgs> OnLeftGame;
         int CurrentlyRunningGames { get; }
