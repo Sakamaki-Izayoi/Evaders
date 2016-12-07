@@ -1,15 +1,16 @@
 ﻿namespace Evaders.Client
 {
     using System;
+    using CommonNetworking.CommonPayloads;
 
     public interface IQueuer
     {
-        event EventHandler<QueueChangedEventArgs> OnServersideQueueCountChanged;
-        event EventHandler<GameEventArgs> OnJoinedGame;
-        event EventHandler<GameEventArgs> OnLeftGame;
-        int CurrentlyRunningGames { get; }
+        event EventHandler<QueueChangedEventArgs> OnUserStateChanged;
+        event EventHandler<GameEventArgs> OnGameStarted;
 
-        void EnterQueue(string mode, int count = 1);
-        void LeaveQueue(string mode, int count = 1);
+        UserState LastState { get; }
+
+        void EnterQueue(string mode);
+        void LeaveQueue();
     }
 }

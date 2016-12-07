@@ -2,21 +2,18 @@
 {
     using System;
     using CommonNetworking.CommonPayloads;
+    using Core.Game;
 
-    internal interface IServer
+    public interface IServer
     {
         string Motd { get; }
         int MaxQueueCount { get; }
         string[] GameModes { get; }
         
-        bool WouldAuthCollide(Guid login, IServerUser connectingUser, out IServerUser existingUser);
         long GenerateUniqueUserIdentifier();
-        void HandleUserAction(IServerUser from, LiveGameAction action);
-        void HandleUserEndTurn(IServerUser user, long gameIdentifier);
-        void HandleUserEnterQueue(IServerUser user, QueueAction count);
-        void HandleUserLeaveQueue(IServerUser user, QueueAction count);
-        void HandleUserReconnect(IServerUser user);
-        void HandleUserResync(IServerUser user, long gameIdentifier);
+        void HandleUserEnterQueue(IServerUser user, QueueAction action);
+        void HandleUserLeaveQueue(IServerUser user);
+        bool IsUserQueued(IServerUser user);
         void Kick(IServerUser user);
         void HandleGameEnded(ServerGame serverGame);
     }

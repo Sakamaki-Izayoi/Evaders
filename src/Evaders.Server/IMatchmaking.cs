@@ -10,7 +10,7 @@
         IServerSupervisor Supervisor { get; set; }
 
         /// <returns>How often this user is in that queue</returns>
-        int GetRegisterCount(IServerUser user);
+        bool HasUser(IServerUser user);
 
         void EnterQueue(IServerUser user);
 

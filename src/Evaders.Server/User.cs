@@ -7,8 +7,11 @@
     using System.Net.Sockets;
     using System.Text;
     using System.Threading;
+    using System.Threading.Tasks;
     using CommonNetworking;
     using CommonNetworking.CommonPayloads;
+    using Core.Game;
+    using JetBrains.Annotations;
     using Microsoft.Extensions.Logging;
     using Newtonsoft.Json;
 
@@ -26,18 +29,20 @@
         public string Username { get; private set; }
 
         [JsonProperty]
-        public bool IsBot { get; private set; }
+        public bool IsPassiveBot { get; private set; }
 
+        public bool IsIngame => _myGame != null;
         public bool Authorized { get; private set; }
         public bool FullGameState { get; private set; } // Send full game state each turn or just differences
-        public int GameCount { get; private set; }
+
         private readonly object _authLock = new object();
         private readonly ILogger _logger;
         private readonly IRulesProvider _rules;
         private readonly IServer _server;
 
-        private PacketParser<PacketC2S> _packetParser;
+        private readonly PacketParser<PacketC2S> _packetParser;
         private EasyTaskSocket _socket;
+        private ServerGame _myGame;
 
         public User(Socket socket, ILogger logger, IServer server, IRulesProvider rules, PacketParser<PacketC2S> packetParser)
         {
@@ -54,44 +59,50 @@
             Send(Packet.PacketTypeS2C.IllegalAction, new IllegalAction(reason, false, null));
         }
 
-        /// <summary>
-        ///     Replaces the socket with the socket of the given user. This should be used to let a reconnecting user continue
-        ///     where he left
-        /// </summary>
-        /// <param name="user"></param>
-        /// <param name="socket"></param>
-        public void Inherit(IServerUser user, Socket socket)
-        {
-            var userImpl = user as User;
+        ///// <summary>
+        /////     Replaces the socket with the socket of the given user. This should be used to let a reconnecting user continue
+        /////     where he left
+        ///// </summary>
+        ///// <param name="user"></param>
+        ///// <param name="socket"></param>
+        //public void Inherit(IServerUser user, Socket socket)
+        //{
+        //    var userImpl = user as User;
 
-            if (userImpl == null)
-                throw new NotImplementedException(); // assuming there are no other implementations of IServerUser than User
+        //    if (userImpl == null)
+        //        throw new NotImplementedException(); // assuming there are no other implementations of IServerUser than User
 
-            _socket.Dispose(); // Dispose disconnected
-            userImpl._socket.StopJobs(); // Discontinue wrapper because the events will call the methods of the new (duplicate) user
-            SetupSocket(userImpl._socket.Socket); // Recreate wrapper
-            _packetParser = userImpl._packetParser;
-            Username = user.Username;
-            FullGameState = user.FullGameState;
-            Authorized = user.Authorized;
-        }
+        //    _socket.Dispose(); // Dispose disconnected
+        //    userImpl._socket.StopJobs(); // Discontinue wrapper because the events will call the methods of the new (duplicate) user
+        //    SetupSocket(userImpl._socket.Socket); // Recreate wrapper
+        //    _packetParser = userImpl._packetParser;
+        //    Username = user.Username;
+        //    FullGameState = user.FullGameState;
+        //    Authorized = user.Authorized;
+        //}
 
         public void Send(Packet.PacketTypeS2C type, object payload)
         {
             Send(new PacketS2C(type, payload));
         }
 
-        public void OnGameStarted()
+        public void SetIngame([CanBeNull] ServerGame game)
         {
-            lock (_authLock)
-                GameCount++;
+            _myGame = game;
+            Send(Packet.PacketTypeS2C.UserState, new UserState(_server.IsUserQueued(this), IsIngame, IsPassiveBot, Username, FullGameState));
         }
 
-        public void OnGameEnded()
-        {
-            lock (_authLock)
-                GameCount--;
-        }
+        //public void OnGameStarted()
+        //{
+        //    lock (_authLock)
+        //        GameCount++;
+        //}
+
+        //public void OnGameEnded()
+        //{
+        //    lock (_authLock)
+        //        GameCount--;
+        //}
 
         public void Dispose()
         {
@@ -184,41 +195,56 @@
                         Identifier = _server.GenerateUniqueUserIdentifier();
                         Authorized = true;
 
-                        IServerUser existingConnection;
+                        //IServerUser existingConnection;
 
-                        if (_server.WouldAuthCollide(Login, this, out existingConnection))
-                        {
-                            _logger.LogInformation($"User relogging: {this} -> {existingConnection}");
-                            if (existingConnection.Authorized && existingConnection.Connected && !Address.Equals(existingConnection.Address))
-                                _logger.LogWarning($"Possible account sharing: {this} and {existingConnection}");
+                        //if (_server.WouldAuthCollide(Login, this, out existingConnection))
+                        //{
+                        //    _logger.LogInformation($"User relogging: {this} -> {existingConnection}");
+                        //    if (existingConnection.Authorized && existingConnection.Connected && !Address.Equals(existingConnection.Address))
+                        //        _logger.LogWarning($"Possible account sharing: {this} and {existingConnection}");
 
-                            existingConnection.Inherit(this, _socket.Socket);
-                            Authorized = false;
-                            _server.Kick(this);
-                            _server.HandleUserReconnect(existingConnection);
-                            return;
-                        }
+                        //    existingConnection.Inherit(this, _socket.Socket);
+                        //    Authorized = false;
+                        //    _server.Kick(this);
+                        //    _server.HandleUserReconnect(existingConnection);
+                        //    return;
+                        //}
                         Send(Packet.PacketTypeS2C.AuthResult, new AuthCompleted(_server.Motd, _server.GameModes, _server.MaxQueueCount));
                     }
                     break;
                 case Packet.PacketTypeC2S.GameAction:
-                    _server.HandleUserAction(this, packet.GetPayload<LiveGameAction>());
+                    if (!IsIngame)
+                    {
+                        IllegalAction("You are not in a game. Cannot execute game action.");
+                        return;
+                    }
+
+                    _myGame.AddGameAction(this, packet.GetPayload<GameAction>());
                     break;
                 case Packet.PacketTypeC2S.SwitchQueueMode:
-                    IsBot = !IsBot;
-                    _logger.LogInformation($"{this} is now a passive bot: {IsBot}");
+                    IsPassiveBot = !IsPassiveBot;
+                    _logger.LogInformation($"{this} is now a passive bot: {IsPassiveBot}");
                     break;
                 case Packet.PacketTypeC2S.EnterQueue:
                     _server.HandleUserEnterQueue(this, packet.GetPayload<QueueAction>());
                     break;
                 case Packet.PacketTypeC2S.LeaveQueue:
-                    _server.HandleUserLeaveQueue(this, packet.GetPayload<QueueAction>());
+                    _server.HandleUserLeaveQueue(this);
                     break;
                 case Packet.PacketTypeC2S.TurnEnd:
-                    _server.HandleUserEndTurn(this, packet.GetPayload<long>());
+                    if (!IsIngame)
+                    {
+                        IllegalAction("You are not in a game. Cannot end turn");
+                        return;
+                    }
+
+                    _myGame.UserRequestsEndTurn(this);
                     break;
                 case Packet.PacketTypeC2S.ForceResync:
-                    _server.HandleUserResync(this, packet.GetPayload<long>());
+                    _myGame.HandleReconnect(this);
+                    break;
+                case Packet.PacketTypeC2S.GetUserState:
+                    Send(Packet.PacketTypeS2C.UserState, new UserState(_server.IsUserQueued(this), IsIngame, IsPassiveBot, Username, FullGameState));
                     break;
                 default:
                     _logger.LogWarning($"Authorized user sent invalid packet type: {packet.TypeNum} from: {this}");

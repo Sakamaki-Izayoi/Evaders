@@ -13,14 +13,10 @@ namespace Evaders.CommonNetworking.CommonPayloads
         [JsonProperty]
         public readonly string GameMode;
 
-        [JsonProperty]
-        public readonly int Count;
-
         [JsonConstructor]
-        public QueueState(string gameMode, int count)
+        public QueueState(string gameMode)
         {
             GameMode = gameMode;
-            Count = count;
         }
     }
 }

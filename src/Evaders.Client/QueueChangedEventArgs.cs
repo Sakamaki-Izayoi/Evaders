@@ -5,13 +5,11 @@
 
     public class QueueChangedEventArgs : EventArgs
     {
-        public readonly string GameMode;
-        public readonly int Count;
+        public readonly UserState State;
 
-        public QueueChangedEventArgs(QueueState state)
+        public QueueChangedEventArgs(UserState state)
         {
-            GameMode = state.GameMode;
-            Count = state.Count;
+            State = state;
         }
     }
 }

@@ -164,6 +164,10 @@
       <Project>{0e4b7d2e-6adf-4387-b41b-6f36c6736bb8}</Project>
       <Name>Evaders.Client</Name>
     </ProjectReference>
+    <ProjectReference Include="..\Evaders.CommonNetworking\Evaders.CommonNetworking.csproj">
+      <Project>{4b8b0fc1-6bb3-46e6-87b3-7da84deb217d}</Project>
+      <Name>Evaders.CommonNetworking</Name>
+    </ProjectReference>
     <ProjectReference Include="..\Evaders.Core\Evaders.Core.csproj">
       <Project>{f45515b8-560a-47ae-ad4a-ff6196b6eee9}</Project>
       <Name>Evaders.Core</Name>

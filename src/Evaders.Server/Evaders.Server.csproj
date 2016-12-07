@@ -40,7 +40,6 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="EvadersServer.cs" />
-    <Compile Include="Extensions\GameExtensions.cs" />
     <Compile Include="Extensions\UserExtensions.cs" />
     <Compile Include="Extensions\UserStatisticsExtensions.cs" />
     <Compile Include="IMatchmaking.cs" />
