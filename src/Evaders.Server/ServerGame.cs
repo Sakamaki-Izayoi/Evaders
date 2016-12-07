@@ -15,7 +15,7 @@
     using Newtonsoft.Json;
     using Payloads;
 
-    internal class ServerGame : DefaultSandboxGame<IServerUser>
+    public class ServerGame : DefaultSandboxGame<IServerUser>
     {
         private readonly ILogger _logger;
         private readonly IServer _server;
@@ -98,7 +98,9 @@
         {
             bool ready;
             if (!_turnEndUsers.TryGetValue(user, out ready))
-                throw new Exception("Turn-end user dictionary invalid");
+            {
+                _logger.LogWarning($"Either {user} is being a bad boy or the {nameof(_turnEndUsers)} dict is bad.");
+            }
             return ready;
         }
 
@@ -120,6 +122,12 @@
 
         public void AddGameAction(IServerUser user, GameAction action)
         {
+            if (action == null)
+            {
+                OnIllegalAction(user, "Invalid game action");
+                return;
+            }
+
             AddAction(user, action);
         }
 
@@ -136,7 +144,7 @@
         protected override void OnActionExecuted(IServerUser from, GameAction action)
         {
             foreach (var serverUser in Users.Where(user => !user.FullGameState))
-                serverUser.Send(Packet.PacketTypeS2C.GameAction, action.AsLiveAction(GameIdentifier));
+                serverUser.Send(Packet.PacketTypeS2C.ConfirmedGameAction, action);
         }
 
         private void InitTurnEndStates()
@@ -151,7 +159,7 @@
             foreach (var user in Users.Where(user => user.FullGameState))
                 user.Send(Packet.PacketTypeS2C.GameState, new GameState(GameIdentifier, this, user.Identifier));
             foreach (var serverUser in Users)
-                serverUser.Send(Packet.PacketTypeS2C.NextRound, GameIdentifier);
+                serverUser.Send(Packet.PacketTypeS2C.NextTurn);
             _lastFrameSec = _time.Elapsed.TotalSeconds;
             _supervisor.GameEndedTurn(this);
         }
@@ -170,6 +178,11 @@
                 return;
 
             _supervisor.GameEnded(this, winner.Login, Users.Where(usr => usr.Identifier != winner.Identifier).Select(usr => usr.Login).ToArray());
+
+            foreach (var serverUser in Users)
+            {
+                serverUser.SetIngame(null);
+            }
         }
 
         protected override void OnIllegalAction(IServerUser user, string warningMsg)
@@ -179,14 +192,15 @@
 
         protected override bool BeforeHandleAction(IServerUser from, GameAction action)
         {
-            if (IsUserReady(from))
-            {
-                OnIllegalAction(from, "Please wait for others to get ready. No need to spam! In fact, it could cost you a turn :)");
-                return false;
-            }
             if (!HasUser(from))
             {
                 OnIllegalAction(from, "You can't end your turn in a game you don't even play in");
+                _logger.LogWarning($"Potential cheat attempt by {from}: tried to take action in other game");
+                return false;
+            }
+            if (IsUserReady(from))
+            {
+                OnIllegalAction(from, "Please wait for others to get ready. No need to spam! In fact, it could cost you a turn :)");
                 return false;
             }
 

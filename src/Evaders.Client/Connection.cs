@@ -14,58 +14,18 @@
     using Microsoft.Extensions.Logging;
     using Payloads;
 
-    public class Connection : IQueuer, IGameProvider
+    public class Connection : IQueuer
     {
-        event EventHandler<CountChangedEventArgs> IQueuer.OnServersideQueueCountChanged
-        {
-            add
-            {
-                OnServersideQueueCountChangedInternal += value;
-            }
-            remove
-            {
-                OnServersideQueueCountChangedInternal -= value;
-            }
-        }
-
-        event EventHandler<GameEventArgs> IQueuer.OnJoinedGame
-        {
-            add
-            {
-                OnJoinedGameInternal += value;
-            }
-            remove
-            {
-                OnJoinedGameInternal -= value;
-            }
-        }
-
-        event EventHandler<GameEventArgs> IQueuer.OnLeftGame
-        {
-            add
-            {
-                OnLeftGameInternal += value;
-            }
-            remove
-            {
-                OnLeftGameInternal -= value;
-            }
-        }
-
-        private event EventHandler<CountChangedEventArgs> OnServersideQueueCountChangedInternal;
-        private event EventHandler<GameEventArgs> OnJoinedGameInternal;
-        private event EventHandler<GameEventArgs> OnLeftGameInternal;
+        public event EventHandler<QueueChangedEventArgs> OnUserStateChanged;
+        public event EventHandler<GameEventArgs> OnGameStarted;
 
         public event EventHandler<LoggedInEventArgs> OnLoggedIn;
         //public event EventHandler<MessageEventArgs> OnKicked;
         public event EventHandler<MessageEventArgs> OnIllegalAction;
-
-        public IReadOnlyDictionary<long, GameBase> RunningGames => _games.ToDictionary(item => item.Key, item => (GameBase)item.Value);
-        public int CurrentlyRunningGames => _games.Count;
         private readonly EasySocket _easySocket;
-        private readonly Dictionary<long, ClientGame> _games = new Dictionary<long, ClientGame>();
+        public ClientGame Game { get; private set; }
+        public UserState LastState { get; private set; }
         private readonly ILogger _logger;
-        private int _lastQueueCount;
         private PacketParser<PacketS2C> _packetParser;
 
         public Connection(Guid identifier, string displayName, IPAddress serverAddr, ushort serverPort, PacketParser<PacketS2C> parser, ILogger logger)
@@ -96,14 +56,14 @@
             return new Connection(identifier, displayName, serverAddr, serverPort, new PacketParserBson<PacketS2C>(logger), logger);
         }
 
-        void IQueuer.EnterQueue(string gameMode, int count)
+        void IQueuer.EnterQueue(string gameMode)
         {
-            Send(Packet.PacketTypeC2S.EnterQueue, new QueueAction(gameMode, count));
+            Send(Packet.PacketTypeC2S.EnterQueue, new QueueAction(gameMode));
         }
 
-        void IQueuer.LeaveQueue(string gameMode, int count)
+        void IQueuer.LeaveQueue()
         {
-            Send(Packet.PacketTypeC2S.LeaveQueue, new QueueAction(gameMode, count));
+            Send(Packet.PacketTypeC2S.LeaveQueue);
         }
 
         private void Startup(Guid identifier, string displayName, PacketParser<PacketS2C> packetParser)
@@ -138,26 +98,25 @@
                         OnLoggedIn?.Invoke(this, new LoggedInEventArgs(this, state.Motd, state.GameModes));
                     }
                     break;
-                case Packet.PacketTypeS2C.GameAction:
+                case Packet.PacketTypeS2C.ConfirmedGameAction:
                     {
-                        var gameAction = packet.GetPayload<LiveGameAction>();
-                        if (_games.ContainsKey(gameAction.GameIdentifier))
+                        var gameAction = packet.GetPayload<GameAction>();
+                        if (Game == null)
                         {
-                            var game = _games[gameAction.GameIdentifier];
-                            var ownerOfEntity = game.GetOwnerOfEntity(gameAction.ControlledEntityIdentifier);
-                            if (ownerOfEntity == null)
-                            {
-                                _logger.LogError($"Corrupted game state - cannot find entity: {gameAction.ControlledEntityIdentifier} in game {gameAction.GameIdentifier}");
-                                Send(Packet.PacketTypeC2S.ForceResync, gameAction.GameIdentifier);
-                            }
-                            else
-                                _games[gameAction.GameIdentifier].AddActionWithoutNetworking(ownerOfEntity, gameAction);
+                            _logger.LogError($"Action in unknown game: {gameAction}");
+                            Send(Packet.PacketTypeC2S.ForceResync, null);
+                            return;
+                        }
+
+                        var ownerOfEntity = Game.GetOwnerOfEntity(gameAction.ControlledEntityIdentifier);
+                        if (ownerOfEntity == null)
+                        {
+                            _logger.LogError($"Corrupted game state - cannot find entity: {gameAction.ControlledEntityIdentifier} in game");
+                            Send(Packet.PacketTypeC2S.ForceResync);
                         }
                         else
-                        {
-                            _logger.LogError($"Action in unknown game: {gameAction.GameIdentifier}");
-                            Send(Packet.PacketTypeC2S.ForceResync, gameAction.GameIdentifier);
-                        }
+                            Game.AddActionWithoutNetworking(ownerOfEntity, gameAction);
+
                     }
                     break;
                 case Packet.PacketTypeS2C.IllegalAction:
@@ -165,60 +124,53 @@
                         var illegalAction = packet.GetPayload<IllegalAction>();
                         if (!illegalAction.InsideGame)
                             OnIllegalAction?.Invoke(this, new MessageEventArgs(illegalAction.Message));
-                        else if ((illegalAction.GameIdentifier != null) && _games.ContainsKey(illegalAction.GameIdentifier.Value))
-                            _games[illegalAction.GameIdentifier.Value].HandleServerIllegalAction(illegalAction.Message);
-                        else if (illegalAction.GameIdentifier != null)
-                        {
-                            _logger.LogError($"Server refused action in unknown game: {illegalAction.GameIdentifier}");
-                            Send(Packet.PacketTypeC2S.ForceResync, illegalAction.GameIdentifier);
-                        }
+                        else if (Game != null)
+                            Game.HandleServerIllegalAction(illegalAction.Message);
                         else
-                            _logger.LogWarning("Cannot handle server packet (Claims illegal action in game, but does not specify the game identifier)");
+                        {
+                            _logger.LogError("Server claims illegal action in game - but there is no active game");
+                            Send(Packet.PacketTypeC2S.ForceResync);
+                        }
                     }
                     break;
-                case Packet.PacketTypeS2C.NextRound:
+                case Packet.PacketTypeS2C.NextTurn:
                     {
-                        var gameIdentifier = packet.GetPayload<long>();
-                        if (_games.ContainsKey(gameIdentifier))
-                            _games[gameIdentifier].DoNextTurn();
+                        if (Game != null)
+                            Game.DoNextTurn();
                         else
                         {
-                            _logger.LogError($"Server sent turn end in unknown game: {gameIdentifier}");
-                            Send(Packet.PacketTypeC2S.ForceResync, gameIdentifier);
+                            _logger.LogError($"Server sent turn end - but there is no active game");
+                            Send(Packet.PacketTypeC2S.ForceResync);
                         }
                     }
                     break;
                 case Packet.PacketTypeS2C.GameState:
                     {
                         var state = packet.GetPayload<GameState>();
-                        _games[state.GameIdentifier] = state.State;
+                        Game = state.State;
                         state.State.SetGameDetails(state.YourIdentifier, state.GameIdentifier, this);
-                        OnJoinedGameInternal?.Invoke(this, new GameEventArgs(state.State));
                         state.State.RequestClientActions();
+                        OnGameStarted?.Invoke(this, new GameEventArgs(Game));
                     }
                     break;
                 case Packet.PacketTypeS2C.GameEnd:
                     {
-                        var end = packet.GetPayload<GameEnd>();
-                        if (_games.ContainsKey(end.GameIdentifier))
-                        {
-                            var game = _games[end.GameIdentifier];
-                            _games.Remove(end.GameIdentifier);
-                            OnLeftGameInternal?.Invoke(this, new GameEventArgs(game));
-                        }
+                        var end = packet.GetPayload<GameEnd>(); // Todo
+
+
+                        Game = null;
                     }
                     break;
-                case Packet.PacketTypeS2C.QueueState:
-                    var args = new CountChangedEventArgs(packet.GetPayload<int>());
-                    _lastQueueCount = args.Count;
-                    OnServersideQueueCountChangedInternal?.Invoke(this, args);
+                case Packet.PacketTypeS2C.UserState:
+                    LastState = packet.GetPayload<UserState>();
+                    OnUserStateChanged?.Invoke(this, new QueueChangedEventArgs(LastState));
                     break;
                 default:
                     throw new ArgumentOutOfRangeException();
             }
         }
 
-        internal void Send(Packet.PacketTypeC2S type, object payloadData)
+        internal void Send(Packet.PacketTypeC2S type, object payloadData = null)
         {
             var packetC2S = new PacketC2S(type, payloadData);
             _logger.LogTrace($"Sending packet: {packetC2S}");

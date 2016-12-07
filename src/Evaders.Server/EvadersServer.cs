@@ -34,10 +34,10 @@
         private long _userIdentifier;
 
 
-        public EvadersServer([NotNull] IProviderFactory<IServerSupervisor> supervisorFactoryFactory, [NotNull] IProviderFactory<GameSettings> settingsFactory, [NotNull] IProviderFactory<IMatchmaking> matchmakingFactory, [NotNull] ILogger logger, [NotNull] ServerSettings config)
+        public EvadersServer([NotNull] IProviderFactory<IServerSupervisor> supervisorFactory, [NotNull] IProviderFactory<GameSettings> settingsFactory, [NotNull] IProviderFactory<IMatchmaking> matchmakingFactory, [NotNull] ILogger logger, [NotNull] ServerSettings config)
         {
-            if (supervisorFactoryFactory == null)
-                throw new ArgumentNullException(nameof(supervisorFactoryFactory));
+            if (supervisorFactory == null)
+                throw new ArgumentNullException(nameof(supervisorFactory));
             if (settingsFactory == null)
                 throw new ArgumentNullException(nameof(settingsFactory));
             if (matchmakingFactory == null)
@@ -49,7 +49,7 @@
             if (!config.IsValid)
                 throw new ArgumentException("Invalid config", nameof(config));
 
-            _supervisorFactory = supervisorFactoryFactory;
+            _supervisorFactory = supervisorFactory;
             _settingsFactory = settingsFactory;
             _logger = logger;
 
@@ -60,18 +60,6 @@
                 keyValuePair.Value.OnSuggested += OnMatchmakingFoundMatchup;
             }
             _config = config;
-        }
-
-        void IServer.HandleUserAction(IServerUser from, LiveGameAction action)
-        {
-            ServerGame game;
-            if (!_runningGames.TryGetValue(action.GameIdentifier, out game))
-            {
-                from.IllegalAction("You cannot take action in a game you don't even play in!");
-                return;
-            }
-
-            game.AddGameAction(from, action);
         }
 
         public bool WouldAuthCollide(Guid login, IServerUser connectingUser, out IServerUser existingUser)
@@ -88,84 +76,57 @@
             return Interlocked.Increment(ref _userIdentifier);
         }
 
-        void IServer.HandleUserEndTurn(IServerUser user, long gameIdentifier)
+        public bool IsUserQueued(IServerUser user) => _matchmaking.Any(item => item.Value.HasUser(user));
+
+        public void HandleUserEnterQueue(IServerUser user, QueueAction action)
         {
-            ServerGame game;
-            if (!_runningGames.TryGetValue(gameIdentifier, out game))
+            if (user.IsIngame)
             {
-                user.IllegalAction("You can't end your turn in a game you don't even play in: " + gameIdentifier);
+                user.IllegalAction("You cannot queue while ingame");
                 return;
             }
-            game.UserRequestsEndTurn(user);
-        }
 
-        void IServer.HandleUserEnterQueue(IServerUser user, QueueAction action)
-        {
+            var queued = IsUserQueued(user);
+            if (queued)
+            {
+                user.Send(Packet.PacketTypeS2C.UserState, new UserState(true, user.IsIngame, user.IsPassiveBot, user.Username, user.FullGameState));
+                return;
+            }
+
             var matchmaking = GetMatchmaking(user, action);
             if (matchmaking == null)
+            {
+                user.IllegalAction("There is no such gamemode");
                 return;
+            }
 
-            int regCount;
             lock (matchmaking)
-            {
-                regCount = matchmaking.GetRegisterCount(user);
-                if (regCount + user.GameCount >= _config.MaxQueueCount)
-                {
-                    user.IllegalAction("Exceeded max queue action: " + _config.MaxQueueCount);
-                    return;
-                }
+                matchmaking.EnterQueue(user);
 
-                var queueLimitExclusive = Math.Min(_config.MaxQueueCount, regCount + action.Count);
-                for (; regCount < queueLimitExclusive; regCount++)
-                    matchmaking.EnterQueue(user);
-            }
-
-            user.Send(Packet.PacketTypeS2C.QueueState, regCount);
+            user.Send(Packet.PacketTypeS2C.UserState, new UserState(true, user.IsIngame, user.IsPassiveBot, user.Username, user.FullGameState));
 
         }
 
-        void IServer.HandleUserLeaveQueue(IServerUser user, QueueAction action)
+        public void HandleUserLeaveQueue(IServerUser user)
         {
-            var matchmaking = GetMatchmaking(user, action);
-            if (matchmaking == null)
-                return;
+            var matchmaking = _matchmaking.FirstOrDefault(item => item.Value.HasUser(user)).Value;
 
-            int regCount;
-            lock (matchmaking)
-            {
-                regCount = matchmaking.GetRegisterCount(user);
-                if (action.Count >= regCount)
-                    matchmaking.LeaveQueueCompletely(user);
-                else
-                    for (var i = 0; i < action.Count; i++)
-                        matchmaking.LeaveQueue(user);
-            }
+            if (matchmaking != null)
+                lock (matchmaking)
+                    matchmaking.LeaveQueue(user);
 
-            user.Send(Packet.PacketTypeS2C.QueueState, Math.Max(0, regCount - action.Count));
+            if (user.Connected)
+                user.Send(Packet.PacketTypeS2C.UserState, new UserState(false, user.IsIngame, user.IsPassiveBot, user.Username, user.FullGameState));
 
-        }
-
-        void IServer.HandleUserReconnect(IServerUser user)
-        {
-            foreach (var game in _runningGames.Where(game => game.Value.HasUser(user)))
-                game.Value.HandleReconnect(user);
-        }
-
-        void IServer.HandleUserResync(IServerUser user, long gameIdentifier)
-        {
-            ServerGame game;
-            if (!_runningGames.TryGetValue(gameIdentifier, out game))
-            {
-                _logger.LogWarning($"User tried resyncing in an unknown game: {gameIdentifier}");
-                user.IllegalAction($"Cannot resync in game: {gameIdentifier}, because it does not exist!");
-                return;
-            }
-            game.HandleReconnect(user);
         }
 
         void IServer.Kick(IServerUser user)
         {
             DateTime connectedTime;
+
+            if (IsUserQueued(user))
+                HandleUserLeaveQueue(user);
+
             lock (_connectedUsers)
             {
                 _connectedUsers.TryRemove(user, out connectedTime);
@@ -174,16 +135,12 @@
                 user.Dispose();
 
             _logger.LogDebug($"Kicking user: {user}, who connected {connectedTime}");
-
-            // Todo: instead of letting running games wait for the timeout, kick the user and his entities out right away
         }
 
         void IServer.HandleGameEnded(ServerGame serverGame)
         {
             ServerGame game;
-            if (_runningGames.TryRemove(serverGame.GameIdentifier, out game))
-                foreach (var serverGameUser in serverGame.Users)
-                    serverGameUser.OnGameEnded();
+            _runningGames.TryRemove(serverGame.GameIdentifier, out game);
         }
 
         public void Start()
@@ -214,18 +171,8 @@
 
         private IMatchmaking GetMatchmaking(IServerUser user, QueueAction action)
         {
-            if (action.Count <= 0)
-            {
-                user.IllegalAction("Invalid queue count");
-                return null;
-            }
-
             IMatchmaking matchmaking;
-            if (!_matchmaking.TryGetValue(action.GameMode, out matchmaking))
-            {
-                user.IllegalAction("There is no such gamemode");
-                return null;
-            }
+            _matchmaking.TryGetValue(action.GameMode, out matchmaking);
             return matchmaking;
         }
 
@@ -261,11 +208,11 @@
                 foreach (var serverUser in matchCreatedArgs.Users)
                 {
                     matchCreatedArgs.Source.LeaveQueue(serverUser);
+                    serverUser.SetIngame(game);
                     game.HandleReconnect(serverUser);
                 }
-                if (_runningGames.TryAdd(_gameIdentifier, game))
-                    foreach (var serverUser in game.Users)
-                        serverUser.OnGameStarted();
+                if (!_runningGames.TryAdd(_gameIdentifier, game))
+                    _logger.LogError($"Cannot add game with ID: {game.GameIdentifier}, current is: {_gameIdentifier}");
             }
         }
     }

@@ -42,12 +42,10 @@
     <Compile Include="ClientGame.cs" />
     <Compile Include="ClientUser.cs" />
     <Compile Include="Connection.cs" />
-    <Compile Include="CountChangedEventArgs.cs" />
+    <Compile Include="QueueChangedEventArgs.cs" />
     <Compile Include="GameEventArgs.cs" />
     <Compile Include="GameException.cs" />
-    <Compile Include="IGameProvider.cs" />
     <Compile Include="IQueuer.cs" />
-    <Compile Include="Extensions\GameExtensions.cs" />
     <Compile Include="LoggedInEventArgs.cs" />
     <Compile Include="MessageEventArgs.cs" />
     <Compile Include="Payloads\GameEnd.cs" />

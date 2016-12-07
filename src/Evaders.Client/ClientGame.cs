@@ -5,7 +5,6 @@
     using System.Linq;
     using CommonNetworking;
     using Core.Game;
-    using Extensions;
     using Newtonsoft.Json;
 
     public class ClientGame : Game<ClientUser>
@@ -100,7 +99,7 @@
             if (!BeforeHandleAction(from, action))
                 return false;
 
-            _connection.Send(Packet.PacketTypeC2S.GameAction, action.AsLiveAction(GameIdentifier));
+            _connection.Send(Packet.PacketTypeC2S.GameAction, action);
             return true;
         }
 

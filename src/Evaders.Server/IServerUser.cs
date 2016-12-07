@@ -9,17 +9,15 @@
     public interface IServerUser : IUser, IDisposable
     {
         string Username { get; }
-        bool IsBot { get; }
+        bool IsPassiveBot { get; }
         bool FullGameState { get; }
         Guid Login { get; }
         bool Authorized { get; }
         IPAddress Address { get; }
-        int GameCount { get; }
+        bool IsIngame { get; }
 
         void IllegalAction(string reason);
-        void Inherit(IServerUser other, Socket socket);
-        void Send(Packet.PacketTypeS2C type, object payload);
-        void OnGameStarted();
-        void OnGameEnded();
+        void Send(Packet.PacketTypeS2C type, object payload = null);
+        void SetIngame(ServerGame game);
     }
 }

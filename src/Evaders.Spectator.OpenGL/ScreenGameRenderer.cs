@@ -10,31 +10,28 @@
 
     public class ScreenGameRenderer : Screen
     {
+        private readonly Connection _connection;
         public override Color BackgroundColor => new Color(60, 0, 0);
         private const float MaxZoom = 2f, MinZoom = 0.2f;
         private static readonly Color[] PlayerColorArray = { Color.DarkRed, Color.CornflowerBlue, Color.Goldenrod, Color.White, Color.Purple, Color.Chocolate, Color.OrangeRed, Color.Honeydew };
-        private readonly IGameProvider _games;
         private readonly Dictionary<long, int> _playerColorMapper = new Dictionary<long, int>();
         private Vector2 _cameraPosition = Vector2.Zero;
         private bool _firstUpdate;
-        private long _gameViewIdentifier;
         private KeyboardState _lastKeyboardState;
         private MouseState _lastMouseState;
         private float _zoom = 0.2f;
 
-        public ScreenGameRenderer(IScreenManager manager, IGameProvider games) : base(manager)
+        public ScreenGameRenderer(IScreenManager manager, Connection connection) : base(manager)
         {
-            _games = games;
+            _connection = connection;
         }
 
         public override void Draw(SpriteBatch spritebatch, GraphicsDeviceManager graphicsDeviceManager)
         {
-            if (!_games.RunningGames.Any())
+            if (_connection.Game == null)
                 return;
 
-            if (!_games.RunningGames.ContainsKey(_gameViewIdentifier))
-                _gameViewIdentifier = _games.RunningGames.First().Key;
-            var game = _games.RunningGames[_gameViewIdentifier];
+            var game = _connection.Game;
 
             var viewMatrix = Matrix.CreateTranslation(_cameraPosition.X, _cameraPosition.Y, 0f) * Matrix.CreateScale(_zoom, _zoom, 1f) * Matrix.CreateTranslation(graphicsDeviceManager.PreferredBackBufferWidth / 2f, graphicsDeviceManager.PreferredBackBufferHeight / 2f, 0f);
 
@@ -130,13 +127,6 @@
             {
                 var zoomFac = 1f / _zoom;
                 _cameraPosition += new Vector2((mouseState.X - _lastMouseState.X) * zoomFac, (mouseState.Y - _lastMouseState.Y) * zoomFac);
-            }
-
-            if (keyboardState.IsKeyUp(Keys.Space) && _lastKeyboardState.IsKeyDown(Keys.Space))
-            {
-                var index = _games.RunningGames.Keys.ToList().IndexOf(_gameViewIdentifier);
-                if (index != -1)
-                    _gameViewIdentifier = _games.RunningGames.Keys.ToArray()[++index % _games.RunningGames.Count];
             }
 
             _lastKeyboardState = keyboardState;

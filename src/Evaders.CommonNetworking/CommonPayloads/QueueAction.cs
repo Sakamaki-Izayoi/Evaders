@@ -4,15 +4,12 @@
 
     public class QueueAction
     {
-        [JsonProperty] public readonly int Count;
-
         [JsonProperty] public readonly string GameMode;
 
         [JsonConstructor]
-        public QueueAction(string gameMode, int count)
+        public QueueAction(string gameMode)
         {
             GameMode = gameMode;
-            Count = count;
         }
     }
 }

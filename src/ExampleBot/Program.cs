@@ -29,12 +29,12 @@
         private static void Main()
         {
             var program = new Program();
-            var context = new ConnectionContext(IPAddress.Loopback, 9091, program);
+            var context = new ConnectionContext(IPAddress.Loopback, 9090, program);
             program.Add(context);
 
             var visualizer = new SpectatorWindow();
             visualizer.Add(new ScreenGameRenderer(visualizer, context.Connection));
-            visualizer.PostUpdate += () => { program.Update(); };
+            visualizer.PostUpdate += program.Update;
             visualizer.Run();
         }
 

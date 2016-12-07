@@ -50,7 +50,7 @@
             for (var i = 0; i < _inQueue.Count; i++)
                 if (_joinedQueueTime[_inQueue[i]] > _maxTimeInQueue)
                 {
-                    var hoomanBots = _inQueue.Where(usr => !usr.IsBot && (usr != _inQueue[i])).ToArray();
+                    var hoomanBots = _inQueue.Where(usr => !usr.IsPassiveBot && (usr != _inQueue[i])).ToArray();
                     if (hoomanBots.Any())
                     {
                         IServerUser bestHoomanBot;
@@ -87,15 +87,15 @@
                 }
         }
 
-        public int GetRegisterCount(IServerUser user)
+        public bool HasUser(IServerUser user)
         {
-            return _inQueue.Count(usr => usr == user);
+            return _inQueue.Any(usr => usr == user);
         }
 
         public void EnterQueue(IServerUser user)
         {
             var time = _time.Elapsed.TotalSeconds;
-            if ((time - _lastQueuerTime > _maxTimeInQueue) && _inQueue.All(item => item.IsBot) && _inQueue.Any() && !user.IsBot)
+            if ((time - _lastQueuerTime > _maxTimeInQueue) && _inQueue.All(item => item.IsPassiveBot) && _inQueue.Any() && !user.IsPassiveBot)
             {
                 AddUser(user);
 
@@ -113,7 +113,7 @@
             }
 
 
-            if (!user.IsBot)
+            if (!user.IsPassiveBot)
                 _lastQueuerTime = time;
 
             AddUser(user);

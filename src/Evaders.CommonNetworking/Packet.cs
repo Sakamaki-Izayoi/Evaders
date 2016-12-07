@@ -15,19 +15,20 @@
             EnterQueue,
             LeaveQueue,
             ForceResync,
-            SwitchQueueMode
+            SwitchQueueMode,
+            GetUserState
         }
 
         [JsonConverter(typeof(StringEnumConverter))]
         public enum PacketTypeS2C
         {
             AuthResult,
-            GameAction,
+            ConfirmedGameAction,
             IllegalAction,
-            NextRound,
+            NextTurn,
             GameState,
             GameEnd,
-            QueueState
+            UserState
         }
 
         [JsonProperty] public object Payload;
