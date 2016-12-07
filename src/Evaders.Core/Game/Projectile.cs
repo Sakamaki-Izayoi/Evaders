@@ -10,35 +10,27 @@
         [JsonProperty]
         public Vector2 Position { get; internal set; }
 
-        public Vector2 DespawnPosition => Position + Direction * ProjectileSpeedSec * Game.TimePerFrameSec * (LifeEndTurn - Game.Turn);
-        public Vector2 PositionNextTurn => Position + Direction * ProjectileSpeedSec * Game.TimePerFrameSec;
-        public double MovingDistancePerTurn => ProjectileSpeedSec * Game.TimePerFrameSec;
+        public Vector2 DespawnPosition => Position + Direction*ProjectileSpeedSec*Game.TimePerFrameSec*(LifeEndTurn - Game.Turn);
+        public Vector2 PositionNextTurn => Position + Direction*ProjectileSpeedSec*Game.TimePerFrameSec;
+        public double MovingDistancePerTurn => ProjectileSpeedSec*Game.TimePerFrameSec;
 
         public readonly int Damage;
 
-        [JsonProperty]
-        public readonly Vector2 Direction;
+        [JsonProperty] public readonly Vector2 Direction;
 
-        [JsonProperty]
-        public readonly long EntityIdentifier;
+        [JsonProperty] public readonly long EntityIdentifier;
 
-        [JsonProperty]
-        public readonly int ExplosionSize;
+        [JsonProperty] public readonly int ExplosionSize;
 
-        [JsonProperty]
-        public readonly int HitboxSize;
+        [JsonProperty] public readonly int HitboxSize;
 
-        [JsonProperty]
-        public readonly int LifeEndTurn;
+        [JsonProperty] public readonly int LifeEndTurn;
 
-        [JsonProperty]
-        public readonly long PlayerIdentifier;
+        [JsonProperty] public readonly long PlayerIdentifier;
 
-        [JsonProperty]
-        public readonly long ProjectileIdentifier;
+        [JsonProperty] public readonly long ProjectileIdentifier;
 
-        [JsonProperty]
-        public readonly double ProjectileSpeedSec;
+        [JsonProperty] public readonly double ProjectileSpeedSec;
 
         internal GameBase Game;
 
@@ -48,7 +40,7 @@
                 direction = direction.Unit; //Bug: .Unit is slightly inaccurate, causing the above check to fail :S this is a workaround
             //throw new ArgumentException("Not a direction (unit vector)", nameof(direction));
 
-            Position = entity.Position + direction * (entity.CharData.HitboxSize + entity.CharData.ProjectileHitboxSize);
+            Position = entity.Position + direction*(entity.CharData.HitboxSize + entity.CharData.ProjectileHitboxSize);
             Direction = direction;
             HitboxSize = entity.CharData.ProjectileHitboxSize;
             ExplosionSize = entity.CharData.ProjectileExplosionSize;
@@ -56,7 +48,7 @@
             PlayerIdentifier = entity.PlayerIdentifier;
             EntityIdentifier = entity.EntityIdentifier;
             ProjectileIdentifier = projectileIdentifier;
-            LifeEndTurn = game.Turn + (int)Math.Ceiling(game.Settings.ProjectileLifeTimeSec / game.TimePerFrameSec);
+            LifeEndTurn = game.Turn + (int) Math.Ceiling(game.Settings.ProjectileLifeTimeSec/game.TimePerFrameSec);
             ProjectileSpeedSec = entity.CharData.ProjectileSpeedSec;
 
             Game = game;
@@ -173,7 +165,7 @@
         {
             if (distance <= 0)
                 return 0;
-            return (uint)Math.Floor(distance / MovingDistancePerTurn);
+            return (uint) Math.Floor(distance/MovingDistancePerTurn);
         }
 
         /// <summary>
@@ -186,7 +178,7 @@
             {
                 var dangFrameEntity = entity.GetPositionIn(i, assumedEntityWaypoint);
                 var dangFrameProj = GetPositionIn(i);
-                if (dangFrameProj.Distance(dangFrameEntity, true) <= (HitboxSize + entity.HitboxSize) * (HitboxSize + entity.HitboxSize))
+                if (dangFrameProj.Distance(dangFrameEntity, true) <= (HitboxSize + entity.HitboxSize)*(HitboxSize + entity.HitboxSize))
                     return true;
             }
             return false;
@@ -202,7 +194,7 @@
 
         public Vector2 GetPositionIn(uint turns)
         {
-            return Position.Extended(DespawnPosition, MovingDistancePerTurn * turns);
+            return Position.Extended(DespawnPosition, MovingDistancePerTurn*turns);
         }
 
         internal void UpdateMovement()
@@ -212,14 +204,14 @@
 
         internal void UpdateCombat()
         {
-            if ((Game.Turn >= LifeEndTurn) || Game.Entities.Any(entity => (entity.PlayerIdentifier != PlayerIdentifier) && (entity.Position.Distance(Position, true) <= (HitboxSize + entity.CharData.HitboxSize) * (HitboxSize + entity.CharData.HitboxSize))))
+            if ((Game.Turn >= LifeEndTurn) || Game.Entities.Any(entity => (entity.PlayerIdentifier != PlayerIdentifier) && (entity.Position.Distance(Position, true) <= (HitboxSize + entity.CharData.HitboxSize)*(HitboxSize + entity.CharData.HitboxSize))))
                 Explode();
         }
 
         private void Explode()
         {
             foreach (var entity in Game.Entities)
-                if ((entity.PlayerIdentifier != PlayerIdentifier) && (entity.Position.Distance(Position, true) <= (ExplosionSize + entity.CharData.HitboxSize) * (ExplosionSize + entity.CharData.HitboxSize)))
+                if ((entity.PlayerIdentifier != PlayerIdentifier) && (entity.Position.Distance(Position, true) <= (ExplosionSize + entity.CharData.HitboxSize)*(ExplosionSize + entity.CharData.HitboxSize)))
                     entity.InflictDamage(Damage);
             Game.HandleDeath(this);
         }

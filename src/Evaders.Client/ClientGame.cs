@@ -56,7 +56,7 @@
         internal void RequestClientActions()
         {
             OnWaitingForActions?.Invoke(this, new GameEventArgs(this));
-            _connection.Send(Packet.PacketTypeC2S.TurnEnd, GameIdentifier);
+            _connection.Send(Packet.PacketTypeC2S.TurnEnd);
         }
 
         internal void HandleServerIllegalAction(string msg)
@@ -71,7 +71,7 @@
 
         private void EndTurn()
         {
-            _connection.Send(Packet.PacketTypeC2S.TurnEnd, GameIdentifier);
+            _connection.Send(Packet.PacketTypeC2S.TurnEnd);
         }
 
         internal void DoNextTurn()

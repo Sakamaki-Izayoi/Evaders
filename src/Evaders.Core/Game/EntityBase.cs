@@ -1,14 +1,13 @@
 ﻿namespace Evaders.Core.Game
 {
     using System;
-    using System.IO;
     using Newtonsoft.Json;
     using Utility;
 
     public class EntityBase
     {
-        public bool CanShoot => (Game.Turn - LastShotTurn) * Game.TimePerFrameSec >= CharData.ReloadDelaySec;
-        public int ReloadFrames => (int)Math.Ceiling(CharData.ReloadDelaySec / Game.TimePerFrameSec);
+        public bool CanShoot => (Game.Turn - LastShotTurn)*Game.TimePerFrameSec >= CharData.ReloadDelaySec;
+        public int ReloadFrames => (int) Math.Ceiling(CharData.ReloadDelaySec/Game.TimePerFrameSec);
 
         [JsonProperty]
         public int Health { get; private set; }
@@ -23,12 +22,12 @@
         public long EntityIdentifier { get; private set; }
 
         [JsonProperty]
-        public long PlayerIdentifier { get; private set; }
+        public long PlayerIdentifier { get; }
 
         [JsonProperty]
         public Vector2 MovingTo { get; private set; }
 
-        public double MovingDistancePerTurn => CharData.SpeedSec * Game.TimePerFrameSec;
+        public double MovingDistancePerTurn => CharData.SpeedSec*Game.TimePerFrameSec;
         public Vector2 PositionNextTurn => GetPositionIn(1);
 
         [JsonProperty]
@@ -36,8 +35,7 @@
 
         public int NextReloadedTurn => LastShotTurn + ReloadFrames;
 
-        [JsonProperty]
-        public readonly CharacterData CharData;
+        [JsonProperty] public readonly CharacterData CharData;
 
         internal GameBase Game;
 
@@ -65,26 +63,26 @@
                 Game.HandleDeath(this);
         }
 
-        public bool InsideArenaNow(Vector2 position) => position.Distance(Vector2.Zero, true) <= Game.CurrentArenaRadius * Game.CurrentArenaRadius;
+        public bool InsideArenaNow(Vector2 position) => position.Distance(Vector2.Zero, true) <= Game.CurrentArenaRadius*Game.CurrentArenaRadius;
 
         public bool InsideArenaOnTurn(Vector2 position, int turn)
         {
             var radiusThen = Game.GetArenaRadius(turn);
-            return position.Distance(Vector2.Zero, true) <= radiusThen * radiusThen;
+            return position.Distance(Vector2.Zero, true) <= radiusThen*radiusThen;
         }
 
         public bool InsideArenaOnArrival(Vector2 position) => InsideArenaOnTurn(position, GetTurnsToReach(position) + Game.Turn);
 
         public bool InsideArenaOnArrival() => InsideArenaOnArrival(MovingTo);
 
-        public int GetTurnsToReach(Vector2 position) => (int)Math.Ceiling(position.Distance(Position) / MovingDistancePerTurn);
+        public int GetTurnsToReach(Vector2 position) => (int) Math.Ceiling(position.Distance(Position)/MovingDistancePerTurn);
 
         internal void UpdateMovement()
         {
-            if ((Position - MovingTo).LengthSqr < CharData.SpeedSec * Game.TimePerFrameSec * CharData.SpeedSec * Game.TimePerFrameSec)
+            if ((Position - MovingTo).LengthSqr < CharData.SpeedSec*Game.TimePerFrameSec*CharData.SpeedSec*Game.TimePerFrameSec)
                 Position = MovingTo;
             else
-                Position = Position.Extended(MovingTo, CharData.SpeedSec * Game.TimePerFrameSec);
+                Position = Position.Extended(MovingTo, CharData.SpeedSec*Game.TimePerFrameSec);
         }
 
         internal void UpdateCombat()
@@ -100,8 +98,8 @@
         /// <returns></returns>
         public int GetNeededProjectileTurns(Vector2 position)
         {
-            var sec = position.Distance(Position.Extended(position, HitboxSize + CharData.ProjectileHitboxSize), true) / (CharData.ProjectileSpeedSec * CharData.ProjectileSpeedSec);
-            return (int)Math.Ceiling(sec / Game.TimePerFrameSec);
+            var sec = position.Distance(Position.Extended(position, HitboxSize + CharData.ProjectileHitboxSize), true)/(CharData.ProjectileSpeedSec*CharData.ProjectileSpeedSec);
+            return (int) Math.Ceiling(sec/Game.TimePerFrameSec);
         }
 
         internal bool MoveToInternal(Vector2 coord)
@@ -139,7 +137,7 @@
         {
             if (turn < Game.Turn)
                 throw new ArgumentException("Cannot query past turn positions", nameof(turn));
-            return GetPositionIn((uint)(turn - Game.Turn), movingTo);
+            return GetPositionIn((uint) (turn - Game.Turn), movingTo);
         }
 
         public Vector2 GetPositionIn(uint turns)
@@ -149,8 +147,8 @@
 
         public Vector2 GetPositionIn(uint turns, Vector2 movingTo)
         {
-            var distance = MovingDistancePerTurn * turns;
-            return movingTo.Distance(Position, true) <= distance * distance ? movingTo : Position.Extended(movingTo, distance);
+            var distance = MovingDistancePerTurn*turns;
+            return movingTo.Distance(Position, true) <= distance*distance ? movingTo : Position.Extended(movingTo, distance);
         }
     }
 }

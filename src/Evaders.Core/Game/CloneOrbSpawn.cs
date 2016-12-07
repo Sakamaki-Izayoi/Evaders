@@ -1,10 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-
-namespace Evaders.Core.Game
+﻿namespace Evaders.Core.Game
 {
     using Newtonsoft.Json;
     using Utility;

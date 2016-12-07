@@ -6,12 +6,11 @@
     using System.Linq;
     using System.Runtime.Serialization;
     using Newtonsoft.Json;
-    using Newtonsoft.Json.Serialization;
     using Utility;
 
     public abstract class Game<TUser> : GameBase where TUser : IUser
     {
-        public override double TimePerFrameSec => 1d / Settings.TurnsPerSecond;
+        public override double TimePerFrameSec => 1d/Settings.TurnsPerSecond;
         public bool GameEnded => _entities.All(entity => entity.Value.PlayerIdentifier == _entities.FirstOrDefault().Value?.PlayerIdentifier);
 
         [JsonProperty]
@@ -30,21 +29,20 @@
         public override CloneOrbSpawn ClonerSpawn => _clonerSpawn;
 
         protected IEnumerable<Entity> EntitiesInternal => _entities.Values;
+        private readonly CloneOrbSpawn _clonerSpawn;
 
         private readonly ConcurrentDictionary<long, Entity> _entities = new ConcurrentDictionary<long, Entity>();
-        private readonly ConcurrentDictionary<long, Projectile> _projectiles = new ConcurrentDictionary<long, Projectile>();
         private readonly HealOrbSpawn[] _healOrbs;
-        private readonly CloneOrbSpawn _clonerSpawn;
+        private readonly ConcurrentDictionary<long, Projectile> _projectiles = new ConcurrentDictionary<long, Projectile>();
 
         private readonly List<Entity> _toRemoveEntities = new List<Entity>();
         private readonly List<Projectile> _toRemoveProjectiles = new List<Projectile>();
         private readonly ConcurrentDictionary<TUser, ConcurrentBag<GameAction>> _users;
         protected readonly object NextTurnLock = new object();
 
-        [JsonProperty("LastEntityIdentifier")]
-        private long _entityIdentifier;
-        [JsonProperty("LastProjectileIdentifier")]
-        private long _projectileIdentifier;
+        [JsonProperty("LastEntityIdentifier")] private long _entityIdentifier;
+
+        [JsonProperty("LastProjectileIdentifier")] private long _projectileIdentifier;
 
         protected Game(IEnumerable<TUser> users, GameSettings settings, IEnumerable<Entity> entities, IEnumerable<Projectile> projectiles, IEnumerable<HealOrbSpawn> healSpawns, CloneOrbSpawn clonerSpawn, long lastEntityIdentifier, long lastProjectileIdentifier) : base(settings)
         {
@@ -64,7 +62,8 @@
             {
                 foreach (var user in _users)
                 {
-                    if (!enumerator.MoveNext()) throw new Exception("Map generator returns less positions than requested");
+                    if (!enumerator.MoveNext())
+                        throw new Exception("Map generator returns less positions than requested");
 
                     var entityIdentifier = ++_entityIdentifier;
                     _entities.TryAdd(entityIdentifier, new Entity(Settings.DefaultCharacterData, enumerator.Current, user.Key.Identifier, entityIdentifier, this));
@@ -107,7 +106,7 @@
                                 result = controlledEntity.ShootInternal(gameAction.Position);
                                 break;
                             default:
-                                OnIllegalAction(user.Key, "Unknown Action: " + (int)gameAction.Type);
+                                OnIllegalAction(user.Key, "Unknown Action: " + (int) gameAction.Type);
                                 continue;
                         }
                         if (!result)
@@ -227,7 +226,7 @@
 
         protected internal override void HandleDeath(EntityBase entity)
         {
-            _toRemoveEntities.Add((Entity)entity);
+            _toRemoveEntities.Add((Entity) entity);
         }
 
         protected internal override void HandleDeath(Projectile projectile)
@@ -247,7 +246,6 @@
                 foreach (var healOrbSpawn in HealSpawns)
                     healOrbSpawn.Game = this;
                 ClonerSpawn.Game = this;
-
             }
         }
 

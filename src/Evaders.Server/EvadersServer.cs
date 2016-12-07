@@ -62,15 +62,6 @@
             _config = config;
         }
 
-        public bool WouldAuthCollide(Guid login, IServerUser connectingUser, out IServerUser existingUser)
-        {
-            lock (_connectedUsers)
-            {
-                existingUser = _connectedUsers.FirstOrDefault(item => (item.Key.Login == login) && (item.Key != connectingUser)).Key;
-                return existingUser != null;
-            }
-        }
-
         public long GenerateUniqueUserIdentifier()
         {
             return Interlocked.Increment(ref _userIdentifier);
@@ -101,10 +92,11 @@
             }
 
             lock (matchmaking)
+            {
                 matchmaking.EnterQueue(user);
+            }
 
             user.Send(Packet.PacketTypeS2C.UserState, new UserState(true, user.IsIngame, user.IsPassiveBot, user.Username, user.FullGameState));
-
         }
 
         public void HandleUserLeaveQueue(IServerUser user)
@@ -113,11 +105,12 @@
 
             if (matchmaking != null)
                 lock (matchmaking)
+                {
                     matchmaking.LeaveQueue(user);
+                }
 
             if (user.Connected)
                 user.Send(Packet.PacketTypeS2C.UserState, new UserState(false, user.IsIngame, user.IsPassiveBot, user.Username, user.FullGameState));
-
         }
 
         void IServer.Kick(IServerUser user)
@@ -143,9 +136,18 @@
             _runningGames.TryRemove(serverGame.GameIdentifier, out game);
         }
 
+        public bool WouldAuthCollide(Guid login, IServerUser connectingUser, out IServerUser existingUser)
+        {
+            lock (_connectedUsers)
+            {
+                existingUser = _connectedUsers.FirstOrDefault(item => (item.Key.Login == login) && (item.Key != connectingUser)).Key;
+                return existingUser != null;
+            }
+        }
+
         public void Start()
         {
-            if (_serverSocket != null || _serverSocketBson != null)
+            if ((_serverSocket != null) || (_serverSocketBson != null))
                 throw new InvalidOperationException("You can only start the server once");
 
             _logger.LogInformation("Setting up tcp accept socket");

@@ -10,10 +10,10 @@
 
     public class ScreenGameRenderer : Screen
     {
-        private readonly Connection _connection;
         public override Color BackgroundColor => new Color(60, 0, 0);
         private const float MaxZoom = 2f, MinZoom = 0.2f;
-        private static readonly Color[] PlayerColorArray = { Color.DarkRed, Color.CornflowerBlue, Color.Goldenrod, Color.White, Color.Purple, Color.Chocolate, Color.OrangeRed, Color.Honeydew };
+        private static readonly Color[] PlayerColorArray = {Color.DarkRed, Color.CornflowerBlue, Color.Goldenrod, Color.White, Color.Purple, Color.Chocolate, Color.OrangeRed, Color.Honeydew};
+        private readonly Connection _connection;
         private readonly Dictionary<long, int> _playerColorMapper = new Dictionary<long, int>();
         private Vector2 _cameraPosition = Vector2.Zero;
         private bool _firstUpdate;
@@ -33,16 +33,14 @@
 
             var game = _connection.Game;
 
-            var viewMatrix = Matrix.CreateTranslation(_cameraPosition.X, _cameraPosition.Y, 0f) * Matrix.CreateScale(_zoom, _zoom, 1f) * Matrix.CreateTranslation(graphicsDeviceManager.PreferredBackBufferWidth / 2f, graphicsDeviceManager.PreferredBackBufferHeight / 2f, 0f);
+            var viewMatrix = Matrix.CreateTranslation(_cameraPosition.X, _cameraPosition.Y, 0f)*Matrix.CreateScale(_zoom, _zoom, 1f)*Matrix.CreateTranslation(graphicsDeviceManager.PreferredBackBufferWidth/2f, graphicsDeviceManager.PreferredBackBufferHeight/2f, 0f);
 
 
             spritebatch.Begin(transformMatrix: viewMatrix, blendState: BlendState.AlphaBlend, samplerState: SamplerState.LinearClamp);
             DrawCircle(spritebatch, Vector2.Zero, game.CurrentArenaRadius, Color.White);
 
             foreach (var gameHealSpawn in game.HealSpawns.Where(item => item.IsUp))
-            {
                 DrawCentered(Texture.Star, spritebatch, gameHealSpawn.Position, gameHealSpawn.HitboxSize, Color.Green);
-            }
 
             DrawCentered(Texture.Star, spritebatch, game.ClonerSpawn.Position, game.ClonerSpawn.HitboxSize, Color.OrangeRed);
 
@@ -55,9 +53,9 @@
                 const float outlineFactor = 0.8f;
 
                 var entityPos = DrawCircle(spritebatch, validEntity.Position, validEntity.HitboxSize, outlineColor);
-                DrawCircle(spritebatch, validEntity.Position, validEntity.HitboxSize * outlineFactor, entityColor);
+                DrawCircle(spritebatch, validEntity.Position, validEntity.HitboxSize*outlineFactor, entityColor);
 
-                entityPos.Y -= entityPos.Height / 3;
+                entityPos.Y -= entityPos.Height/3;
                 entityPos.Height /= 5;
 
                 var outline = entityPos;
@@ -68,8 +66,8 @@
 
                 spritebatch.Draw(TextureManager.Get(Texture.Pixel), outline, Color.Black);
 
-                var hpPercent = 1d - Math.Min(1, validEntity.Health / (double)validEntity.CharData.MaxHealth);
-                var barSmallerNum = (int)(entityPos.Width * hpPercent);
+                var hpPercent = 1d - Math.Min(1, validEntity.Health/(double) validEntity.CharData.MaxHealth);
+                var barSmallerNum = (int) (entityPos.Width*hpPercent);
                 entityPos.Width -= barSmallerNum;
 
                 spritebatch.Draw(TextureManager.Get(Texture.Pixel), entityPos, Color.Green);
@@ -95,7 +93,7 @@
 
         private Rectangle DrawCentered(Texture texture, SpriteBatch spriteBatch, Core.Utility.Vector2 position, double radius, Color color)
         {
-            var rect = new Rectangle((int)(position.X - radius), (int)(position.Y - radius), (int)(radius * 2), (int)(radius * 2));
+            var rect = new Rectangle((int) (position.X - radius), (int) (position.Y - radius), (int) (radius*2), (int) (radius*2));
             spriteBatch.Draw(TextureManager.Get(texture), rect, color);
             return rect;
         }
@@ -120,13 +118,13 @@
             if (mouseState.ScrollWheelValue != _lastMouseState.ScrollWheelValue)
             {
                 var scale = mouseState.ScrollWheelValue - _lastMouseState.ScrollWheelValue < 0 ? 0.95f : 1.05f;
-                _zoom = MathHelper.Clamp(_zoom * scale, MinZoom, MaxZoom);
+                _zoom = MathHelper.Clamp(_zoom*scale, MinZoom, MaxZoom);
             }
 
             if ((_lastMouseState.LeftButton == ButtonState.Pressed) && (mouseState.LeftButton == ButtonState.Pressed))
             {
-                var zoomFac = 1f / _zoom;
-                _cameraPosition += new Vector2((mouseState.X - _lastMouseState.X) * zoomFac, (mouseState.Y - _lastMouseState.Y) * zoomFac);
+                var zoomFac = 1f/_zoom;
+                _cameraPosition += new Vector2((mouseState.X - _lastMouseState.X)*zoomFac, (mouseState.Y - _lastMouseState.Y)*zoomFac);
             }
 
             _lastKeyboardState = keyboardState;

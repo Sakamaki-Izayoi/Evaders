@@ -1,29 +1,18 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-
-namespace Evaders.CommonNetworking.CommonPayloads
+﻿namespace Evaders.CommonNetworking.CommonPayloads
 {
     using Newtonsoft.Json;
 
     public class UserState
     {
-        [JsonProperty]
-        public readonly bool IsQueued;
+        [JsonProperty] public readonly bool FullGameState;
 
-        [JsonProperty]
-        public readonly bool IsIngame;
+        [JsonProperty] public readonly bool IsIngame;
 
-        [JsonProperty]
-        public readonly bool IsPassiveBot;
+        [JsonProperty] public readonly bool IsPassiveBot;
 
-        [JsonProperty]
-        public readonly string Username;
+        [JsonProperty] public readonly bool IsQueued;
 
-        [JsonProperty]
-        public readonly bool FullGameState;
+        [JsonProperty] public readonly string Username;
 
         [JsonConstructor]
         public UserState(bool isQueued, bool isIngame, bool isPassiveBot, string username, bool fullGameState)

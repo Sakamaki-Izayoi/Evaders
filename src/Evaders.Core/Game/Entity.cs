@@ -11,7 +11,9 @@
         }
 
         [JsonConstructor]
-        protected Entity(CharacterData charData) : base(charData) { }
+        protected Entity(CharacterData charData) : base(charData)
+        {
+        }
 
         public void MoveTo(Vector2 coord)
         {

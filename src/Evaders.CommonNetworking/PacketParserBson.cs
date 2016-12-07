@@ -1,11 +1,6 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-
-namespace Evaders.CommonNetworking
+﻿namespace Evaders.CommonNetworking
 {
+    using System;
     using System.IO;
     using Core.Utility;
     using Microsoft.Extensions.Logging;

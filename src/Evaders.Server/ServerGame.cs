@@ -8,7 +8,6 @@
     using CommonNetworking;
     using CommonNetworking.CommonPayloads;
     using Core.Game;
-    using Extensions;
     using Integration;
     using JetBrains.Annotations;
     using Microsoft.Extensions.Logging;
@@ -98,9 +97,7 @@
         {
             bool ready;
             if (!_turnEndUsers.TryGetValue(user, out ready))
-            {
                 _logger.LogWarning($"Either {user} is being a bad boy or the {nameof(_turnEndUsers)} dict is bad.");
-            }
             return ready;
         }
 
@@ -173,16 +170,14 @@
 
             var winner = Entities.Any() ? Users.First(usr => usr.Identifier == Entities.First().PlayerIdentifier) : null;
             foreach (var serverUser in Users)
-                serverUser.Send(Packet.PacketTypeS2C.GameEnd, new GameEnd(GameIdentifier, Users.ToArray(), serverUser.Identifier == winner?.Identifier, winner));
+                serverUser.Send(Packet.PacketTypeS2C.GameEnd, new GameEnd(GameIdentifier, Users.ToArray(), serverUser.Identifier == winner?.Identifier, winner?.Identifier ?? -1));
             if (winner == null)
                 return;
 
             _supervisor.GameEnded(this, winner.Login, Users.Where(usr => usr.Identifier != winner.Identifier).Select(usr => usr.Login).ToArray());
 
             foreach (var serverUser in Users)
-            {
                 serverUser.SetIngame(null);
-            }
         }
 
         protected override void OnIllegalAction(IServerUser user, string warningMsg)
