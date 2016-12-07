@@ -1,47 +1,8 @@
 ﻿{
-  "defaultCharacter": "default", 
-  "defaultConfiguration": "default",
-  "defaultSetting": "default",
-  "defaultProjectile": "default", 
+  "server": [
 
-  "characters": [
-    {
-      "id": "default",
-      "maxHealth": 100,
-      "projectile": null, 
-      "reloadDelay": 0.75,
-      "hitbox": 65,
-      "speed": 100.0 
-    }
   ],
-  "configurations": [
-    {
-      "id": "default",
-      "settings": null,
-      "ip": "*",
-      "port": 9090,
-      "maxInQueue": 5,
-      "maxTimeInQueue": 15,
-      "maxUsernameLength": 20,
-      "motd": "Welcome :D"
-    }
-  ],
-  "settings": [
-    {
-      "id": "default",
-      "arenaRadius": 1000.0,
-      "fps": 30,
-      "maxTimePerFrame": 0.5,
-      "projectileLifeTime": 10,
-      "character": null 
-    }
-  ],
-  "projectiles": [
-    {
-      "id": "default",
-      "damage": 10,
-      "hitbox": 20,
-      "speed":  250.0   
-    }
-  ]
+  "b": "e",
+    "test": 23,
+	"a": 23
 }
