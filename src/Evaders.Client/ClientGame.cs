@@ -10,20 +10,19 @@
     public class ClientGame : Game<ClientUser>
     {
         public event Action OnGameEnded;
-        public event EventHandler<MessageEventArgs> OnServerRejectedAction;
         public event EventHandler<GameEventArgs> OnWaitingForActions;
-        public IEnumerable<Entity> MyEntities => EntitiesInternal.Where(entity => entity.PlayerIdentifier == _myPlayerIdentifier);
-        public IEnumerable<EntityBase> EnemyEntities => EntitiesInternal.Where(entity => entity.PlayerIdentifier != _myPlayerIdentifier);
-        public IEnumerable<Projectile> EnemyProjectiles => Projectiles.Where(projectile => projectile.PlayerIdentifier != _myPlayerIdentifier);
-        public IEnumerable<Projectile> MyProjectiles => Projectiles.Where(projectile => projectile.PlayerIdentifier == _myPlayerIdentifier);
+        public IEnumerable<Entity> MyEntities => EntitiesInternal.Where(entity => entity.PlayerIdentifier == MyPlayerIdentifier);
+        public IEnumerable<EntityBase> EnemyEntities => EntitiesInternal.Where(entity => entity.PlayerIdentifier != MyPlayerIdentifier);
+        public IEnumerable<Projectile> EnemyProjectiles => Projectiles.Where(projectile => projectile.PlayerIdentifier != MyPlayerIdentifier);
+        public IEnumerable<Projectile> MyProjectiles => Projectiles.Where(projectile => projectile.PlayerIdentifier == MyPlayerIdentifier);
         public long GameIdentifier { get; private set; }
+        public long MyPlayerIdentifier { get; private set; }
         private Connection _connection;
-        private long _myPlayerIdentifier;
 
         internal ClientGame(IEnumerable<ClientUser> users, GameSettings settings, IMapGenerator generator, Connection connection, long myPlayerIdentifier, long gameIdentifier) : base(users, settings, generator)
         {
             _connection = connection;
-            _myPlayerIdentifier = myPlayerIdentifier;
+            MyPlayerIdentifier = myPlayerIdentifier;
             GameIdentifier = gameIdentifier;
         }
 
@@ -34,7 +33,7 @@
 
         internal void SetGameDetails(long myPlayerIdentifier, long gameIdentifier, Connection connection)
         {
-            _myPlayerIdentifier = myPlayerIdentifier;
+            MyPlayerIdentifier = myPlayerIdentifier;
             GameIdentifier = gameIdentifier;
             _connection = connection;
         }
@@ -59,19 +58,9 @@
             _connection.Send(Packet.PacketTypeC2S.TurnEnd);
         }
 
-        internal void HandleServerIllegalAction(string msg)
-        {
-            OnServerRejectedAction?.Invoke(this, new MessageEventArgs(msg));
-        }
-
         protected override void OnIllegalAction(ClientUser user, string warningMsg)
         {
             throw new GameException($"Source: Local (Client), Motd: {warningMsg}");
-        }
-
-        private void EndTurn()
-        {
-            _connection.Send(Packet.PacketTypeC2S.TurnEnd);
         }
 
         internal void DoNextTurn()

@@ -30,7 +30,7 @@
             var config = new ServerSettings();
             var logger = new ConsoleLogger("console", (m, l) => l >= LogLevel.Information, true);
             var supervisor = new EmptySupervisor();
-            var serv = new EvadersServer(new DefaultProviderFactory<IServerSupervisor>(item => supervisor), new DefaultProviderFactory<GameSettings>(item => GameSettings.Default), new DefaultProviderFactory<IMatchmaking>(item => new Matchmaking("Default", config.MaxTimeInQueueSec, logger)), logger, config);
+            var serv = new EvadersServer(new DefaultProviderFactory<IServerSupervisor>(item => supervisor), new DefaultProviderFactory<GameSettings>(item => GameSettings.Default), new DefaultProviderFactory<IMatchmaking>(item => new Matchmaking(logger)), logger, config);
             serv.Start();
 
             var wait = new SpinWait();

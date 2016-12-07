@@ -63,9 +63,8 @@
                         {
                             _logger.LogTrace($"Forcing advancement of game {GameIdentifier}");
                             foreach (var user in Users.Where(usr => usr.Connected && !IsUserReady(usr)))
-                                //_turnEndUsers[user] = true;
                                 OnIllegalAction(user, $"You took too long for your turn. The longest you may think is: {Settings.MaxTurnTimeSec} sec. You skipped the turn!");
-                            //user.Dispose(); // rip socket
+
                             NextTurn();
                         }
                     }
@@ -87,10 +86,9 @@
                     return;
                 }
                 _turnEndUsers[from] = true;
+
+                PossibleEndTurn();
             }
-
-
-            PossibleEndTurn(); // This is not inside the lock on purpose (deadlock)
         }
 
         private bool IsUserReady(IServerUser user)
@@ -182,7 +180,7 @@
 
         protected override void OnIllegalAction(IServerUser user, string warningMsg)
         {
-            user.Send(Packet.PacketTypeS2C.IllegalAction, new IllegalAction(warningMsg, true, GameIdentifier));
+            user.Send(Packet.PacketTypeS2C.IllegalAction, new IllegalAction(warningMsg, true));
         }
 
         protected override bool BeforeHandleAction(IServerUser from, GameAction action)

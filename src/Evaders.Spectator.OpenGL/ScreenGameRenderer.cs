@@ -42,7 +42,8 @@
             foreach (var gameHealSpawn in game.HealSpawns.Where(item => item.IsUp))
                 DrawCentered(Texture.Star, spritebatch, gameHealSpawn.Position, gameHealSpawn.HitboxSize, Color.Green);
 
-            DrawCentered(Texture.Star, spritebatch, game.ClonerSpawn.Position, game.ClonerSpawn.HitboxSize, Color.OrangeRed);
+            if (game.ClonerSpawn.IsUp)
+                DrawCentered(Texture.Star, spritebatch, game.ClonerSpawn.Position, game.ClonerSpawn.HitboxSize, Color.OrangeRed);
 
             foreach (var validEntity in game.Entities)
             {

@@ -19,9 +19,9 @@
             return _cache[type];
         }
 
-        //{
-
         //protected override IList<JsonProperty> CreateProperties(Type type, MemberSerialization memberSerialization)
+
+        //{
         //    return new JsonProperty[0]; //base.CreateProperties(type, memberSerialization).Where(item => item.Writable).ToList();
         //}
     }

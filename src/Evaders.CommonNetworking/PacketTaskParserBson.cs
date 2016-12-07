@@ -8,6 +8,7 @@
     {
         public PacketTaskParserBson(ILogger logger) : base(logger)
         {
+            throw new Exception("Did you fix the concurrency problem? (wrong packet orders fuck you up)");
         }
 
         protected override void RunTask(Action task)

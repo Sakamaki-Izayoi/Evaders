@@ -5,7 +5,6 @@
     public interface IServer
     {
         string Motd { get; }
-        int MaxQueueCount { get; }
         string[] GameModes { get; }
 
         long GenerateUniqueUserIdentifier();

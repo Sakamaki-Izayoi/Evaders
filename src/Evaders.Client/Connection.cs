@@ -118,11 +118,9 @@
                 case Packet.PacketTypeS2C.IllegalAction:
                 {
                     var illegalAction = packet.GetPayload<IllegalAction>();
-                    if (!illegalAction.InsideGame)
-                        OnIllegalAction?.Invoke(this, new MessageEventArgs(illegalAction.Message));
-                    else if (Game != null)
-                        Game.HandleServerIllegalAction(illegalAction.Message);
-                    else
+                    OnIllegalAction?.Invoke(this, new MessageEventArgs(illegalAction.Message));
+
+                    if ((Game == null) && illegalAction.InsideGame)
                     {
                         _logger.LogError("Server claims illegal action in game - but there is no active game");
                         Send(Packet.PacketTypeC2S.ForceResync);
@@ -132,7 +130,9 @@
                 case Packet.PacketTypeS2C.NextTurn:
                 {
                     if (Game != null)
+                    {
                         Game.DoNextTurn();
+                    }
                     else
                     {
                         _logger.LogError($"Server sent turn end - but there is no active game");
@@ -145,7 +145,7 @@
                     var state = packet.GetPayload<GameState>();
                     Game = state.State;
                     state.State.SetGameDetails(state.YourIdentifier, state.GameIdentifier, this);
-                    state.State.RequestClientActions();
+                    Game.RequestClientActions();
                     OnGameStarted?.Invoke(this, new GameEventArgs(Game));
                 }
                     break;

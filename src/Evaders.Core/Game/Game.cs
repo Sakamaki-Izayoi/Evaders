@@ -110,7 +110,7 @@
                                 continue;
                         }
                         if (!result)
-                            OnIllegalAction(user.Key, "Illegal action: " + gameAction);
+                            OnIllegalAction(user.Key, "Illegal action: " + gameAction + ", your entity is: " + controlledEntity.Position + ", shootable: " + controlledEntity.CanShoot);
                         else
                             OnActionExecuted(user.Key, gameAction);
                     }

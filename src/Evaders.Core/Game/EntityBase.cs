@@ -51,10 +51,17 @@
             MovingTo = Position;
         }
 
+
         [JsonConstructor]
-        protected EntityBase(CharacterData charData)
+        protected EntityBase(CharacterData charData, int health, Vector2 position, long entityIdentifier, long playerIdentifier, Vector2 movingTo, int lastShotTurn)
         {
             CharData = charData;
+            Health = health;
+            Position = position;
+            EntityIdentifier = entityIdentifier;
+            PlayerIdentifier = playerIdentifier;
+            MovingTo = movingTo;
+            LastShotTurn = lastShotTurn;
         }
 
         internal void InflictDamage(int amount)

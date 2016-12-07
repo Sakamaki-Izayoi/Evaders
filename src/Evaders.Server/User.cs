@@ -53,7 +53,7 @@
 
         public void IllegalAction(string reason)
         {
-            Send(Packet.PacketTypeS2C.IllegalAction, new IllegalAction(reason, false, null));
+            Send(Packet.PacketTypeS2C.IllegalAction, new IllegalAction(reason, false));
         }
 
         public void Send(Packet.PacketTypeS2C type, object payload)
@@ -158,7 +158,7 @@
                         Identifier = _server.GenerateUniqueUserIdentifier();
                         Authorized = true;
 
-                        Send(Packet.PacketTypeS2C.AuthResult, new AuthCompleted(_server.Motd, _server.GameModes, _server.MaxQueueCount));
+                        Send(Packet.PacketTypeS2C.AuthResult, new AuthCompleted(_server.Motd, _server.GameModes));
                     }
                     break;
                 case Packet.PacketTypeC2S.GameAction:
@@ -190,7 +190,10 @@
                     _myGame.UserRequestsEndTurn(this);
                     break;
                 case Packet.PacketTypeC2S.ForceResync:
-                    _myGame.HandleReconnect(this);
+                    if (_myGame == null)
+                        Send(Packet.PacketTypeS2C.UserState, new UserState(_server.IsUserQueued(this), IsIngame, IsPassiveBot, Username, FullGameState));
+                    else
+                        _myGame.HandleReconnect(this);
                     break;
                 case Packet.PacketTypeC2S.GetUserState:
                     Send(Packet.PacketTypeS2C.UserState, new UserState(_server.IsUserQueued(this), IsIngame, IsPassiveBot, Username, FullGameState));

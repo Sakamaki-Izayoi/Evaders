@@ -23,14 +23,14 @@
         {
         }
 
-        public IWinStatistics GetWinStatistics(Guid player, Guid against)
-        {
-            return new WinStats();
-        }
-
         public Guid GetBestChoice(Guid player, IEnumerable<Guid> possibleOpponents)
         {
             return possibleOpponents.First();
+        }
+
+        public IWinStatistics GetWinStatistics(Guid player, Guid against)
+        {
+            return new WinStats();
         }
 
         public string GetMotd()
