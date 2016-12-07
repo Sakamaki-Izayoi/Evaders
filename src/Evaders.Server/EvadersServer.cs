@@ -15,6 +15,9 @@
 
     public class EvadersServer : IServer, IRulesProvider
     {
+        public string Motd => _config.Motd;
+        public int MaxQueueCount => _config.MaxQueueCount;
+        public string[] GameModes => _config.GameModes;
         public int MaxUsernameLength => _config.MaxUsernameLength;
         public bool ServerListening => _serverSocket.IsBound && !_serverSocket.Stopped;
         public bool BsonServerListening => _serverSocketBson.IsBound && !_serverSocketBson.Stopped;
@@ -71,7 +74,6 @@
             game.AddGameAction(from, action);
         }
 
-
         public bool WouldAuthCollide(Guid login, IServerUser connectingUser, out IServerUser existingUser)
         {
             lock (_connectedUsers)
@@ -103,10 +105,11 @@
             if (matchmaking == null)
                 return;
 
+            int regCount;
             lock (matchmaking)
             {
-                var regCount = matchmaking.GetRegisterCount(user);
-                if (regCount >= _config.MaxQueueCount)
+                regCount = matchmaking.GetRegisterCount(user);
+                if (regCount + user.GameCount >= _config.MaxQueueCount)
                 {
                     user.IllegalAction("Exceeded max queue action: " + _config.MaxQueueCount);
                     return;
@@ -115,9 +118,10 @@
                 var queueLimitExclusive = Math.Min(_config.MaxQueueCount, regCount + action.Count);
                 for (; regCount < queueLimitExclusive; regCount++)
                     matchmaking.EnterQueue(user);
-
-                user.Send(Packet.PacketTypeS2C.QueueState, regCount);
             }
+
+            user.Send(Packet.PacketTypeS2C.QueueState, regCount);
+
         }
 
         void IServer.HandleUserLeaveQueue(IServerUser user, QueueAction action)
@@ -126,17 +130,19 @@
             if (matchmaking == null)
                 return;
 
+            int regCount;
             lock (matchmaking)
             {
-                var regCount = matchmaking.GetRegisterCount(user);
+                regCount = matchmaking.GetRegisterCount(user);
                 if (action.Count >= regCount)
                     matchmaking.LeaveQueueCompletely(user);
                 else
                     for (var i = 0; i < action.Count; i++)
                         matchmaking.LeaveQueue(user);
-
-                user.Send(Packet.PacketTypeS2C.QueueState, Math.Max(0, regCount - action.Count));
             }
+
+            user.Send(Packet.PacketTypeS2C.QueueState, Math.Max(0, regCount - action.Count));
+
         }
 
         void IServer.HandleUserReconnect(IServerUser user)
@@ -172,20 +178,12 @@
             // Todo: instead of letting running games wait for the timeout, kick the user and his entities out right away
         }
 
-        string IServer.GetMotd()
-        {
-            return _config.Motd;
-        }
-
         void IServer.HandleGameEnded(ServerGame serverGame)
         {
             ServerGame game;
-            _runningGames.TryRemove(serverGame.GameIdentifier, out game);
-        }
-
-        public string[] GetGameModes()
-        {
-            return _config.GameModes;
+            if (_runningGames.TryRemove(serverGame.GameIdentifier, out game))
+                foreach (var serverGameUser in serverGame.Users)
+                    serverGameUser.OnGameEnded();
         }
 
         public void Start()
@@ -265,7 +263,9 @@
                     matchCreatedArgs.Source.LeaveQueue(serverUser);
                     game.HandleReconnect(serverUser);
                 }
-                _runningGames.TryAdd(_gameIdentifier, game);
+                if (_runningGames.TryAdd(_gameIdentifier, game))
+                    foreach (var serverUser in game.Users)
+                        serverUser.OnGameStarted();
             }
         }
     }

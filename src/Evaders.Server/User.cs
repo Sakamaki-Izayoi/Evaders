@@ -6,6 +6,7 @@
     using System.Net;
     using System.Net.Sockets;
     using System.Text;
+    using System.Threading;
     using CommonNetworking;
     using CommonNetworking.CommonPayloads;
     using Microsoft.Extensions.Logging;
@@ -29,6 +30,7 @@
 
         public bool Authorized { get; private set; }
         public bool FullGameState { get; private set; } // Send full game state each turn or just differences
+        public int GameCount { get; private set; }
         private readonly object _authLock = new object();
         private readonly ILogger _logger;
         private readonly IRulesProvider _rules;
@@ -77,6 +79,18 @@
         public void Send(Packet.PacketTypeS2C type, object payload)
         {
             Send(new PacketS2C(type, payload));
+        }
+
+        public void OnGameStarted()
+        {
+            lock (_authLock)
+                GameCount++;
+        }
+
+        public void OnGameEnded()
+        {
+            lock (_authLock)
+                GameCount--;
         }
 
         public void Dispose()
@@ -184,7 +198,7 @@
                             _server.HandleUserReconnect(existingConnection);
                             return;
                         }
-                        Send(Packet.PacketTypeS2C.AuthResult, new AuthCompleted(_server.GetMotd(), _server.GetGameModes()));
+                        Send(Packet.PacketTypeS2C.AuthResult, new AuthCompleted(_server.Motd, _server.GameModes, _server.MaxQueueCount));
                     }
                     break;
                 case Packet.PacketTypeC2S.GameAction:
