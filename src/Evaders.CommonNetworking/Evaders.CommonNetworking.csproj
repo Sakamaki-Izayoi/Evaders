@@ -48,8 +48,11 @@
     <Compile Include="EasySocket.cs" />
     <Compile Include="Packet.cs" />
     <Compile Include="PacketC2S.cs" />
-    <Compile Include="PacketTaskParser.cs" />
     <Compile Include="PacketParser.cs" />
+    <Compile Include="PacketTaskParserBson.cs" />
+    <Compile Include="PacketParserBson.cs" />
+    <Compile Include="PacketTaskParserJson.cs" />
+    <Compile Include="PacketParserJson.cs" />
     <Compile Include="PacketS2C.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>

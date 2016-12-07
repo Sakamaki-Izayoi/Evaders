@@ -25,8 +25,7 @@
 
         private readonly object _updateLock = new object();
 
-        [JsonProperty]
-        public readonly long GameIdentifier;
+        [JsonProperty] public readonly long GameIdentifier;
 
         private double _lastFrameSec;
 
@@ -74,7 +73,7 @@
             }
         }
 
-        public void UserRequestsEndTurn(IServerUser @from)
+        public void UserRequestsEndTurn(IServerUser from)
         {
             lock (NextTurnLock) // must not process the request during a nextturn
             {
@@ -83,12 +82,12 @@
                     OnIllegalAction(from, "Please wait for others to get ready. No need to spam! In fact, it could cost you a turn :) (Stop spamming EndTurn)");
                     return;
                 }
-                if (!HasUser(@from))
+                if (!HasUser(from))
                 {
                     OnIllegalAction(from, "You can't end your turn in a game you don't even play in");
                     return;
                 }
-                _turnEndUsers[@from] = true;
+                _turnEndUsers[from] = true;
             }
 
 
@@ -129,10 +128,12 @@
         {
             if (HasUser(user))
                 lock (NextTurnLock)
+                {
                     user.Send(Packet.PacketTypeS2C.GameState, new GameState(GameIdentifier, this, user.Identifier));
+                }
         }
 
-        protected override void OnActionExecuted(IServerUser @from, GameAction action)
+        protected override void OnActionExecuted(IServerUser from, GameAction action)
         {
             foreach (var serverUser in Users.Where(user => !user.FullGameState))
                 serverUser.Send(Packet.PacketTypeS2C.GameAction, action.AsLiveAction(GameIdentifier));
@@ -162,14 +163,13 @@
             if (Users.All(usr => !usr.Connected))
                 return;
 
-            var winner = ValidEntities.Any() ? Users.First(usr => usr.Identifier == ValidEntities.First().PlayerIdentifier) : null;
+            var winner = Entities.Any() ? Users.First(usr => usr.Identifier == Entities.First().PlayerIdentifier) : null;
             foreach (var serverUser in Users)
                 serverUser.Send(Packet.PacketTypeS2C.GameEnd, new GameEnd(GameIdentifier, Users.ToArray(), serverUser.Identifier == winner?.Identifier, winner));
             if (winner == null)
                 return;
 
             _supervisor.GameEnded(this, winner.Login, Users.Where(usr => usr.Identifier != winner.Identifier).Select(usr => usr.Login).ToArray());
-
         }
 
         protected override void OnIllegalAction(IServerUser user, string warningMsg)
@@ -177,14 +177,14 @@
             user.Send(Packet.PacketTypeS2C.IllegalAction, new IllegalAction(warningMsg, true, GameIdentifier));
         }
 
-        protected override bool BeforeHandleAction(IServerUser @from, GameAction action)
+        protected override bool BeforeHandleAction(IServerUser from, GameAction action)
         {
             if (IsUserReady(from))
             {
                 OnIllegalAction(from, "Please wait for others to get ready. No need to spam! In fact, it could cost you a turn :)");
                 return false;
             }
-            if (!HasUser(@from))
+            if (!HasUser(from))
             {
                 OnIllegalAction(from, "You can't end your turn in a game you don't even play in");
                 return false;

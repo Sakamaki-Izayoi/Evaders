@@ -1,6 +1,7 @@
 ﻿namespace Evaders.Core.Game
 {
     using System;
+    using System.IO;
     using Newtonsoft.Json;
     using Utility;
 
@@ -19,10 +20,10 @@
         public bool IsInsideArena => InsideArenaNow(Position);
 
         [JsonProperty]
-        public long EntityIdentifier { get; }
+        public long EntityIdentifier { get; private set; }
 
         [JsonProperty]
-        public long PlayerIdentifier { get; }
+        public long PlayerIdentifier { get; private set; }
 
         [JsonProperty]
         public Vector2 MovingTo { get; private set; }
@@ -40,7 +41,7 @@
 
         internal GameBase Game;
 
-        public EntityBase(CharacterData charData, Vector2 position, long playerIdentifier, long entityIdentifier, GameBase game)
+        internal EntityBase(CharacterData charData, Vector2 position, long playerIdentifier, long entityIdentifier, GameBase game)
         {
             CharData = charData;
             Game = game;
@@ -53,14 +54,9 @@
         }
 
         [JsonConstructor]
-        private EntityBase(CharacterData charData, Vector2 position, long playerIdentifier, long entityIdentifier, Vector2 movingTo)
+        protected EntityBase(CharacterData charData)
         {
             CharData = charData;
-            EntityIdentifier = entityIdentifier;
-            PlayerIdentifier = playerIdentifier;
-            Position = position;
-
-            MovingTo = movingTo;
         }
 
         internal void InflictDamage(int amount)
@@ -125,6 +121,13 @@
                 return true;
             }
             return false;
+        }
+
+        internal EntityBase SpawnClone()
+        {
+            var spawnEntity = Game.SpawnEntity(Position, PlayerIdentifier, CharData);
+            spawnEntity.Health = Health;
+            return spawnEntity;
         }
 
         public Vector2 GetPositionOn(uint turn)

@@ -1,13 +1,9 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-
-namespace Evaders.ServerRunner.Windows
+﻿namespace Evaders.ServerRunner.Windows
 {
+    using System;
     using Server.Integration;
-    class DefaultProviderFactory<T> : IProviderFactory<T>
+
+    internal class DefaultProviderFactory<T> : IProviderFactory<T>
     {
         private readonly Func<string, T> _factory;
 

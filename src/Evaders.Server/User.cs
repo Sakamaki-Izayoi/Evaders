@@ -6,6 +6,7 @@
     using System.Net;
     using System.Net.Sockets;
     using System.Text;
+    using System.Threading;
     using CommonNetworking;
     using CommonNetworking.CommonPayloads;
     using Microsoft.Extensions.Logging;
@@ -29,21 +30,22 @@
 
         public bool Authorized { get; private set; }
         public bool FullGameState { get; private set; } // Send full game state each turn or just differences
+        public int GameCount { get; private set; }
         private readonly object _authLock = new object();
         private readonly ILogger _logger;
         private readonly IRulesProvider _rules;
         private readonly IServer _server;
 
-        private PacketParser _packetParser;
+        private PacketParser<PacketC2S> _packetParser;
         private EasyTaskSocket _socket;
 
-        public User(Socket socket, ILogger logger, IServer server, IRulesProvider rules)
+        public User(Socket socket, ILogger logger, IServer server, IRulesProvider rules, PacketParser<PacketC2S> packetParser)
         {
             _logger = logger;
             _server = server;
             _rules = rules;
-            _packetParser = new PacketParser(logger, Encoding.Unicode);
-            _packetParser.OnReceivedJson += OnPacket;
+            _packetParser = packetParser;
+            _packetParser.OnReceived += HandlePacket;
             SetupSocket(socket);
         }
 
@@ -79,15 +81,22 @@
             Send(new PacketS2C(type, payload));
         }
 
+        public void OnGameStarted()
+        {
+            lock (_authLock)
+                GameCount++;
+        }
+
+        public void OnGameEnded()
+        {
+            lock (_authLock)
+                GameCount--;
+        }
+
         public void Dispose()
         {
             Authorized = false;
             _socket.Dispose();
-        }
-
-        private void OnPacket(string json)
-        {
-            HandlePacket(JsonNet.Deserialize<PacketC2S>(json));
         }
 
         private void SetupSocket(Socket socket)
@@ -110,7 +119,7 @@
                 return;
             }
 
-            var payload = Encoding.Unicode.GetBytes(JsonNet.Serialize(packetS2C));
+            var payload = _packetParser.FromPacket(packetS2C);
             using (var memStream = new MemoryStream())
             {
                 var writer = new BinaryWriter(memStream);
@@ -131,7 +140,7 @@
 
         private void HandlePacket(PacketC2S packet)
         {
-            if (!Authorized && packet.Type != Packet.PacketTypeC2S.Authorize)
+            if (!Authorized && (packet.Type != Packet.PacketTypeC2S.Authorize))
             {
                 _logger.LogDebug($"{this} tried to send unauthorized packets!");
                 IllegalAction("Please authorize first!");
@@ -139,7 +148,7 @@
             }
             _logger.LogDebug($"{this} sent packet: {packet.Type}");
 
-            switch ((Packet.PacketTypeC2S) packet.TypeNum)
+            switch ((Packet.PacketTypeC2S)packet.TypeNum)
             {
                 case Packet.PacketTypeC2S.Authorize:
                     lock (_authLock)
@@ -160,7 +169,7 @@
                             return;
                         }
 
-                        if (Login == null || Login.ToByteArray().Distinct().Count() <= 1)
+                        if ((Login == null) || (Login.ToByteArray().Distinct().Count() <= 1))
                         {
                             IllegalAction("Invalid login. The login is supposed to be a GUID of your choice (choose any, but keep that one!). It needs to be in a notation that can be parsed by this: https://msdn.microsoft.com/en-us/library/system.guid.parse(v=vs.110).aspx");
                             return;
@@ -189,7 +198,7 @@
                             _server.HandleUserReconnect(existingConnection);
                             return;
                         }
-                        Send(Packet.PacketTypeS2C.AuthResult, new AuthCompleted(_server.GetMotd(), _server.GetGameModes()));
+                        Send(Packet.PacketTypeS2C.AuthResult, new AuthCompleted(_server.Motd, _server.GameModes, _server.MaxQueueCount));
                     }
                     break;
                 case Packet.PacketTypeC2S.GameAction:

@@ -4,7 +4,6 @@
     using System.Collections.Generic;
     using System.Diagnostics;
     using System.Linq;
-    using Core.Game;
     using Extensions;
     using Integration;
     using Microsoft.Extensions.Logging;
@@ -13,8 +12,8 @@
     {
         public class MatchCreatedArgs : EventArgs
         {
-            public readonly IMatchmaking Source;
             public readonly string GameMode;
+            public readonly IMatchmaking Source;
             public readonly IServerUser[] Users;
 
             public MatchCreatedArgs(IMatchmaking source, string gameMode, params IServerUser[] users)
@@ -28,10 +27,10 @@
         public event EventHandler<MatchCreatedArgs> OnSuggested;
         public IServerSupervisor Supervisor { get; set; }
         public IEnumerable<IServerUser> InQueue => _inQueue;
+        private readonly string _gameMode;
         private readonly List<IServerUser> _inQueue = new List<IServerUser>();
         private readonly Dictionary<IServerUser, double> _joinedQueueTime = new Dictionary<IServerUser, double>();
         private readonly ILogger _logger;
-        private readonly string _gameMode;
         private readonly float _maxTimeInQueue;
         private readonly Stopwatch _time = Stopwatch.StartNew();
         private double _lastQueuerTime;
@@ -51,7 +50,7 @@
             for (var i = 0; i < _inQueue.Count; i++)
                 if (_joinedQueueTime[_inQueue[i]] > _maxTimeInQueue)
                 {
-                    var hoomanBots = _inQueue.Where(usr => !usr.IsBot && usr != _inQueue[i]).ToArray();
+                    var hoomanBots = _inQueue.Where(usr => !usr.IsBot && (usr != _inQueue[i])).ToArray();
                     if (hoomanBots.Any())
                     {
                         IServerUser bestHoomanBot;
@@ -96,7 +95,7 @@
         public void EnterQueue(IServerUser user)
         {
             var time = _time.Elapsed.TotalSeconds;
-            if (time - _lastQueuerTime > _maxTimeInQueue && _inQueue.All(item => item.IsBot) && _inQueue.Any() && !user.IsBot)
+            if ((time - _lastQueuerTime > _maxTimeInQueue) && _inQueue.All(item => item.IsBot) && _inQueue.Any() && !user.IsBot)
             {
                 AddUser(user);
 
@@ -118,7 +117,7 @@
                 _lastQueuerTime = time;
 
             AddUser(user);
-            var autoBestMatch = _inQueue.FirstOrDefault(usr => usr != user && !usr.HasEverPlayedAgainst(user, Supervisor));
+            var autoBestMatch = _inQueue.FirstOrDefault(usr => (usr != user) && !usr.HasEverPlayedAgainst(user, Supervisor));
             if (autoBestMatch != null)
             {
                 _logger.LogDebug($"Found a match (never played against {autoBestMatch})");

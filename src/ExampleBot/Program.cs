@@ -29,7 +29,7 @@
         private static void Main()
         {
             var program = new Program();
-            var context = new ConnectionContext(IPAddress.Loopback, 9090, program);
+            var context = new ConnectionContext(IPAddress.Loopback, 9091, program);
             program.Add(context);
 
             var visualizer = new SpectatorWindow();

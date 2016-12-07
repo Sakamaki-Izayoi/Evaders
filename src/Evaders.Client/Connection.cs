@@ -66,31 +66,34 @@
         private readonly Dictionary<long, ClientGame> _games = new Dictionary<long, ClientGame>();
         private readonly ILogger _logger;
         private int _lastQueueCount;
+        private PacketParser<PacketS2C> _packetParser;
 
-        public Connection(Guid identifier, string displayName, IPAddress serverAddr, ushort serverPort, ILogger logger)
+        public Connection(Guid identifier, string displayName, IPAddress serverAddr, ushort serverPort, PacketParser<PacketS2C> parser, ILogger logger)
         {
             _logger = logger;
             var client = new Socket(SocketType.Stream, ProtocolType.Tcp);
             client.Connect(serverAddr, serverPort);
             _easySocket = new EasySocket(client);
-            Startup(identifier, displayName);
+            Startup(identifier, displayName, parser);
         }
 
-        public Connection(Guid identifier, string displayName, Socket connectedSocket, ILogger logger)
+        public Connection(Guid identifier, string displayName, Socket connectedSocket, PacketParser<PacketS2C> parser, ILogger logger)
         {
             if (!connectedSocket.Connected)
                 throw new ArgumentException("Not connected", nameof(connectedSocket));
             _logger = logger;
             _easySocket = new EasySocket(connectedSocket);
-            Startup(identifier, displayName);
+            Startup(identifier, displayName, parser);
         }
 
-        public Connection(Guid identifier, string displayName, IPAddress serverAddr, ushort serverPort) : this(identifier, displayName, serverAddr, serverPort, new SilentLogger())
+        public static Connection ConnectJson(Guid identifier, string displayName, IPAddress serverAddr, ushort serverPort, ILogger logger)
         {
+            return new Connection(identifier, displayName, serverAddr, serverPort, new PacketParserJson<PacketS2C>(logger, Encoding.Unicode), logger);
         }
 
-        public Connection(Guid identifier, string displayName, Socket connectedSocket) : this(identifier, displayName, connectedSocket, new SilentLogger())
+        public static Connection ConnectBson(Guid identifier, string displayName, IPAddress serverAddr, ushort serverPort, ILogger logger)
         {
+            return new Connection(identifier, displayName, serverAddr, serverPort, new PacketParserBson<PacketS2C>(logger), logger);
         }
 
         void IQueuer.EnterQueue(string gameMode, int count)
@@ -103,16 +106,17 @@
             Send(Packet.PacketTypeC2S.LeaveQueue, new QueueAction(gameMode, count));
         }
 
-        private void Startup(Guid identifier, string displayName)
+        private void Startup(Guid identifier, string displayName, PacketParser<PacketS2C> packetParser)
         {
-            var parser = new PacketParser(_logger, Encoding.Unicode);
+            var parser = packetParser;
             _easySocket.StartJobs(EasySocket.SocketTasks.Receive);
             _easySocket.OnReceived += (sender, args) =>
             {
                 parser.Continue(args);
                 _easySocket.GiveBack(args.Buffer);
             };
-            parser.OnReceivedJson += OnReceived;
+            parser.OnReceived += OnReceived;
+            _packetParser = parser;
             _logger.LogDebug("Socket set up");
             Send(Packet.PacketTypeC2S.Authorize, new Authorize(identifier, displayName));
             _logger.LogTrace("Authorization request sent");
@@ -123,9 +127,8 @@
             _easySocket.Work();
         }
 
-        private void OnReceived(string json)
+        private void OnReceived(PacketS2C packet)
         {
-            var packet = JsonNet.Deserialize<PacketS2C>(json);
             _logger.LogTrace($"Received packet: {packet}");
             switch (packet.Type)
             {
@@ -162,7 +165,7 @@
                         var illegalAction = packet.GetPayload<IllegalAction>();
                         if (!illegalAction.InsideGame)
                             OnIllegalAction?.Invoke(this, new MessageEventArgs(illegalAction.Message));
-                        else if (illegalAction.GameIdentifier != null && _games.ContainsKey(illegalAction.GameIdentifier.Value))
+                        else if ((illegalAction.GameIdentifier != null) && _games.ContainsKey(illegalAction.GameIdentifier.Value))
                             _games[illegalAction.GameIdentifier.Value].HandleServerIllegalAction(illegalAction.Message);
                         else if (illegalAction.GameIdentifier != null)
                         {
@@ -219,7 +222,7 @@
         {
             var packetC2S = new PacketC2S(type, payloadData);
             _logger.LogTrace($"Sending packet: {packetC2S}");
-            var payload = Encoding.Unicode.GetBytes(JsonNet.Serialize(packetC2S));
+            var payload = _packetParser.FromPacket(packetC2S);
             using (var memStream = new MemoryStream())
             {
                 var writer = new BinaryWriter(memStream);

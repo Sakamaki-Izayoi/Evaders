@@ -40,6 +40,8 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Game\CharacterData.cs" />
+    <Compile Include="Game\CloneOrbSpawn.cs" />
+    <Compile Include="Game\DefaultMapGenerator.cs" />
     <Compile Include="Game\Entity.cs" />
     <Compile Include="Game\DefaultSandboxGame.cs" />
     <Compile Include="Game\EntityBase.cs" />
@@ -47,6 +49,9 @@
     <Compile Include="Game\GameAction.cs" />
     <Compile Include="Game\GameActionType.cs" />
     <Compile Include="Game\GameBase.cs" />
+    <Compile Include="Game\IMapGenerator.cs" />
+    <Compile Include="Game\HealOrbSpawn.cs" />
+    <Compile Include="Game\OrbSpawn.cs" />
     <Compile Include="Utility\GameContractResolver.cs" />
     <Compile Include="Game\GameSettings.cs" />
     <Compile Include="Game\IUser.cs" />
