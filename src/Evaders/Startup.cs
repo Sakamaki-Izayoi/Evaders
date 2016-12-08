@@ -1,36 +1,25 @@
 ﻿namespace Evaders
 {
     using System;
-    using System.Linq;
-    using System.Text;
-    using Core.Game;
     using Data;
     using Game;
-    using Game.Servers;
-    using Game.Supervisors;
     using JetBrains.Annotations;
     using Microsoft.AspNetCore.Builder;
     using Microsoft.AspNetCore.Hosting;
     using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
     using Microsoft.EntityFrameworkCore;
     using Microsoft.Extensions.Configuration;
-    using Microsoft.Extensions.Configuration.Json;
     using Microsoft.Extensions.DependencyInjection;
     using Microsoft.Extensions.Logging;
-    using Microsoft.Extensions.Options;
     using Models;
-    using Server;
     using Server.Integration;
     using Services;
     using Services.Factories;
-    using Services.Providers;
 
     [UsedImplicitly]
     public class Startup
     {
-        public IConfigurationRoot Configuration { get; }
-
-        public IGameServer GameServer { get; set; }
+        private IConfigurationRoot Configuration { get; }
 
 
         public Startup(IHostingEnvironment env)
@@ -48,6 +37,7 @@
         }
 
 
+        [UsedImplicitly]
         public void ConfigureServices(IServiceCollection services)
         {
             /*
@@ -63,13 +53,6 @@
             /*
              * Game server setup
              */
-            services.AddSingleton<IGameServer, DefaultGameServer>();
-            services.Configure<GameServerSettings>(e =>
-            {
-                e.MatchmakingProviderId = "default";
-                e.ServerConfigurationProviderId = "default";
-                e.SupervisorProviderId = "default";
-            });
             services.AddSingleton<IGameManager, GameManager>();
             services.AddSingleton(typeof(IProviderFactory<>), typeof(DefaultFactory<>));
 
@@ -79,6 +62,7 @@
             services.AddMvc();
         }
 
+        [UsedImplicitly]
         public void Configure(IApplicationBuilder app, IHostingEnvironment env, ILoggerFactory loggerFactory, IServiceProvider services, IGameManager gameManager)
         {
             loggerFactory.AddConsole(Configuration.GetSection("Logging"));

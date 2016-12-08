@@ -6,11 +6,17 @@
     using Microsoft.Extensions.Configuration;
     using Microsoft.Extensions.DependencyInjection;
     using Microsoft.Extensions.Logging;
+    using Providers;
     using Server;
     using Server.Integration;
 
     public static class Extensions
     {
+        public static void Provider<T>(this IProviderFactory<T> providerFactory, string id, Func<T> factory)
+        {
+            providerFactory.AddProvider(new DefaultProvider<T>(id, factory));
+        }
+
         public static IProviderFactory<T> GetRequiredProvider<T>(this IServiceProvider services)
         {
             return services.GetRequiredService<IProviderFactory<T>>();

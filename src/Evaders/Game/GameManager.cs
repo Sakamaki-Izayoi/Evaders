@@ -1,9 +1,9 @@
-﻿namespace Evaders.Services
+﻿namespace Evaders.Game
 {
     using System;
     using System.Collections.Generic;
     using System.Net;
-    using System.Threading.Tasks;
+    using System.Threading;
     using Core.Game;
     using JetBrains.Annotations;
     using Microsoft.AspNetCore.Hosting;
@@ -12,6 +12,8 @@
     using Microsoft.Extensions.Logging;
     using Server;
     using Server.Integration;
+    using Services;
+    using Supervisors;
 
     [UsedImplicitly]
     public class GameManager : IGameManager
@@ -19,8 +21,9 @@
         private readonly ILogger<GameManager> _logger;
 
 
-        /* Server */
+        /* Server related */
         private EvadersServer _server;
+        private Timer _tickTimer;
 
         /* Server mechanics */
         private IProviderFactory<IMatchmaking> _matchmakingProvider;
@@ -28,7 +31,9 @@
 
         /* Game and Server settings */
         private IProviderFactory<GameSettings> _gameSettingsProvider;
-        private IProviderFactory<ServerSettings> _serverSettingsProvider;
+
+        /* Current server settings */
+        private ServerSettings _serverSettings;
 
 
         public GameManager(ILogger<GameManager> logger)
@@ -48,7 +53,14 @@
             _serverSupervisiorProvider = services.GetRequiredProvider<IServerSupervisor>();
 
             _gameSettingsProvider = services.GetRequiredProvider<GameSettings>();
-            _serverSettingsProvider = services.GetRequiredProvider<ServerSettings>();
+
+            /*
+             * ADD PROVIDERS
+             */
+            _matchmakingProvider.Provider("default", () => new Matchmaking(services.GetService<ILogger<Matchmaking>>()));
+            _serverSupervisiorProvider.Provider("default", () => new UnrankedServerSupervisor(services.GetService<ILogger<UnrankedServerSupervisor>>(), false));
+
+            _gameSettingsProvider.Provider("default", () => GameSettings.Default); // bug read from gamesettings.json
 
             /*
              * CONFIGURE serversettings.json
@@ -71,7 +83,15 @@
                 configurationBuilder.AddJsonFile("gamesettings.json", false, true);
 
                 var root = configurationBuilder.Build();
+                OnGameSettingsReload(root);
             }
+
+            /*
+             * START the game server
+             */
+            _server = new EvadersServer(_serverSupervisiorProvider, _gameSettingsProvider, _matchmakingProvider, services.GetRequiredService<ILogger<EvadersServer>>(), _serverSettings);
+            _server.Start();
+            _tickTimer = new Timer(e => ((EvadersServer) e).Update(), _server, 0, 32);
         }
 
 
@@ -126,6 +146,7 @@
 
         private static Dictionary<string, GameSettings> LoadGameSettings(IConfiguration root, ILogger logger)
         {
+            // todo load game settings from config root
             return null;
         }
 
@@ -144,7 +165,7 @@
             RegisterReload(root, OnServerSettingsReload);
 
             // load the settings
-            var settings = LoadServerSettings(root, _logger);
+            _serverSettings = LoadServerSettings(root, _logger);
             // todo set server settings
 
             // log that the setting have been reloaded
