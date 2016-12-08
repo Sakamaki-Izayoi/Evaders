@@ -54,6 +54,7 @@
 
         public readonly Socket Socket;
         private uint _bufferSize = ushort.MaxValue;
+        private Task _task;
 
         public EasyTaskSocket(Socket socket)
         {
@@ -70,6 +71,9 @@
         {
             if (Stopped || WasStarted)
                 return false;
+
+            _task = Task.Run(() => { });
+
             WasStarted = true;
 
             if (tasks.HasFlag(SocketTasks.Accept))
@@ -147,35 +151,35 @@
 
         private void OnSendComplete(object sender, SocketAsyncEventArgs socketAsyncEventArgs)
         {
-            Task.Run(() => OnSent?.Invoke(this, socketAsyncEventArgs));
+            _task.ContinueWith((task, obj) => OnSent?.Invoke(this, socketAsyncEventArgs), null);
         }
 
         private void OnSendToComplete(object sender, SocketAsyncEventArgs socketAsyncEventArgs)
         {
-            Task.Run(() => OnSentTo?.Invoke(this, socketAsyncEventArgs));
+            _task.ContinueWith((task, obj) => OnSentTo?.Invoke(this, socketAsyncEventArgs), null);
         }
 
         private void OnAcceptedComplete(object sender, SocketAsyncEventArgs socketAsyncEventArgs)
         {
-            Task.Run(() => OnAccepted?.Invoke(this, socketAsyncEventArgs));
+            _task.ContinueWith((task, obj) => OnAccepted?.Invoke(this, socketAsyncEventArgs), null);
             SetupAccept();
         }
 
         private void OnReceivedComplete(object sender, SocketAsyncEventArgs socketAsyncEventArgs)
         {
-            Task.Run(() => OnReceived?.Invoke(this, socketAsyncEventArgs));
+            _task.ContinueWith((task, obj) => OnReceived?.Invoke(this, socketAsyncEventArgs), null);
             SetupReceive();
         }
 
         private void OnReceivedFromComplete(object sender, SocketAsyncEventArgs socketAsyncEventArgs)
         {
-            Task.Run(() => OnReceivedFrom?.Invoke(this, socketAsyncEventArgs));
+            _task.ContinueWith((task, obj) => OnReceivedFrom?.Invoke(this, socketAsyncEventArgs), null);
             SetupReceiveFrom();
         }
 
         private void OnReceivedMessageFromComplete(object sender, SocketAsyncEventArgs socketAsyncEventArgs)
         {
-            Task.Run(() => OnReceivedMessageFrom?.Invoke(this, socketAsyncEventArgs));
+            _task.ContinueWith((task, obj) => OnReceivedMessageFrom?.Invoke(this, socketAsyncEventArgs), null);
             SetupReceiveMessageFrom();
         }
 

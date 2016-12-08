@@ -1,19 +1,14 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-
-namespace Evaders.CommonNetworking
+﻿namespace Evaders.CommonNetworking
 {
-    using System.IO;
-    using Core.Utility;
+    using System;
+    using System.Threading.Tasks;
     using Microsoft.Extensions.Logging;
 
     public class PacketTaskParserBson<T> : PacketParserBson<T> where T : Packet
     {
         public PacketTaskParserBson(ILogger logger) : base(logger)
         {
+            throw new Exception("Did you fix the concurrency problem? (wrong packet orders fuck you up)");
         }
 
         protected override void RunTask(Action task)

@@ -21,15 +21,15 @@
 
         public readonly long GameIdentifier;
         public readonly ServerUser[] Participants;
-        public readonly ServerUser Winner;
+        public readonly long WinnerIdentifier;
         public readonly bool YouWon;
 
         [JsonConstructor]
-        public GameEnd(long gameIdentifier, bool youWon, ServerUser winner, ServerUser[] participants)
+        public GameEnd(long gameIdentifier, bool youWon, long winnerIdentifier, ServerUser[] participants)
         {
             GameIdentifier = gameIdentifier;
             YouWon = youWon;
-            Winner = winner;
+            WinnerIdentifier = winnerIdentifier;
             Participants = participants;
         }
     }

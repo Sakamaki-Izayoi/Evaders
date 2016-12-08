@@ -8,17 +8,17 @@
 
         [JsonProperty] public readonly IServerUser[] Participants;
 
-        [JsonProperty] public readonly IServerUser Winner;
+        [JsonProperty] public readonly long WinnerIdentifier;
 
         [JsonProperty] public readonly bool YouWon;
 
         [JsonConstructor]
-        public GameEnd(long gameIdentifier, IServerUser[] participants, bool youWon, IServerUser winner)
+        public GameEnd(long gameIdentifier, IServerUser[] participants, bool youWon, long winnerIdentifier)
         {
             GameIdentifier = gameIdentifier;
             Participants = participants;
             YouWon = youWon;
-            Winner = winner;
+            WinnerIdentifier = winnerIdentifier;
         }
     }
 }

@@ -1,16 +1,13 @@
 ﻿namespace Evaders.Client
 {
     using System;
-    using System.Collections.Generic;
     using System.IO;
-    using System.Linq;
     using System.Net;
     using System.Net.Sockets;
     using System.Text;
     using CommonNetworking;
     using CommonNetworking.CommonPayloads;
     using Core.Game;
-    using Core.Utility;
     using Microsoft.Extensions.Logging;
     using Payloads;
 
@@ -22,9 +19,9 @@
         public event EventHandler<LoggedInEventArgs> OnLoggedIn;
         //public event EventHandler<MessageEventArgs> OnKicked;
         public event EventHandler<MessageEventArgs> OnIllegalAction;
-        private readonly EasySocket _easySocket;
         public ClientGame Game { get; private set; }
         public UserState LastState { get; private set; }
+        private readonly EasySocket _easySocket;
         private readonly ILogger _logger;
         private PacketParser<PacketS2C> _packetParser;
 
@@ -46,16 +43,6 @@
             Startup(identifier, displayName, parser);
         }
 
-        public static Connection ConnectJson(Guid identifier, string displayName, IPAddress serverAddr, ushort serverPort, ILogger logger)
-        {
-            return new Connection(identifier, displayName, serverAddr, serverPort, new PacketParserJson<PacketS2C>(logger, Encoding.Unicode), logger);
-        }
-
-        public static Connection ConnectBson(Guid identifier, string displayName, IPAddress serverAddr, ushort serverPort, ILogger logger)
-        {
-            return new Connection(identifier, displayName, serverAddr, serverPort, new PacketParserBson<PacketS2C>(logger), logger);
-        }
-
         void IQueuer.EnterQueue(string gameMode)
         {
             Send(Packet.PacketTypeC2S.EnterQueue, new QueueAction(gameMode));
@@ -64,6 +51,16 @@
         void IQueuer.LeaveQueue()
         {
             Send(Packet.PacketTypeC2S.LeaveQueue);
+        }
+
+        public static Connection ConnectJson(Guid identifier, string displayName, IPAddress serverAddr, ushort serverPort, ILogger logger)
+        {
+            return new Connection(identifier, displayName, serverAddr, serverPort, new PacketParserJson<PacketS2C>(logger, Encoding.Unicode), logger);
+        }
+
+        public static Connection ConnectBson(Guid identifier, string displayName, IPAddress serverAddr, ushort serverPort, ILogger logger)
+        {
+            return new Connection(identifier, displayName, serverAddr, serverPort, new PacketParserBson<PacketS2C>(logger), logger);
         }
 
         private void Startup(Guid identifier, string displayName, PacketParser<PacketS2C> packetParser)
@@ -93,73 +90,72 @@
             switch (packet.Type)
             {
                 case Packet.PacketTypeS2C.AuthResult:
-                    {
-                        var state = packet.GetPayload<AuthCompleted>();
-                        OnLoggedIn?.Invoke(this, new LoggedInEventArgs(this, state.Motd, state.GameModes));
-                    }
+                {
+                    var state = packet.GetPayload<AuthCompleted>();
+                    OnLoggedIn?.Invoke(this, new LoggedInEventArgs(this, state.Motd, state.GameModes));
+                }
                     break;
                 case Packet.PacketTypeS2C.ConfirmedGameAction:
+                {
+                    var gameAction = packet.GetPayload<GameAction>();
+                    if (Game == null)
                     {
-                        var gameAction = packet.GetPayload<GameAction>();
-                        if (Game == null)
-                        {
-                            _logger.LogError($"Action in unknown game: {gameAction}");
-                            Send(Packet.PacketTypeC2S.ForceResync, null);
-                            return;
-                        }
-
-                        var ownerOfEntity = Game.GetOwnerOfEntity(gameAction.ControlledEntityIdentifier);
-                        if (ownerOfEntity == null)
-                        {
-                            _logger.LogError($"Corrupted game state - cannot find entity: {gameAction.ControlledEntityIdentifier} in game");
-                            Send(Packet.PacketTypeC2S.ForceResync);
-                        }
-                        else
-                            Game.AddActionWithoutNetworking(ownerOfEntity, gameAction);
-
+                        _logger.LogError($"Action in unknown game: {gameAction}");
+                        Send(Packet.PacketTypeC2S.ForceResync);
+                        return;
                     }
+
+                    var ownerOfEntity = Game.GetOwnerOfEntity(gameAction.ControlledEntityIdentifier);
+                    if (ownerOfEntity == null)
+                    {
+                        _logger.LogError($"Corrupted game state - cannot find entity: {gameAction.ControlledEntityIdentifier} in game");
+                        Send(Packet.PacketTypeC2S.ForceResync);
+                    }
+                    else
+                        Game.AddActionWithoutNetworking(ownerOfEntity, gameAction);
+                }
                     break;
                 case Packet.PacketTypeS2C.IllegalAction:
+                {
+                    var illegalAction = packet.GetPayload<IllegalAction>();
+                    OnIllegalAction?.Invoke(this, new MessageEventArgs(illegalAction.Message));
+
+                    if ((Game == null) && illegalAction.InsideGame)
                     {
-                        var illegalAction = packet.GetPayload<IllegalAction>();
-                        if (!illegalAction.InsideGame)
-                            OnIllegalAction?.Invoke(this, new MessageEventArgs(illegalAction.Message));
-                        else if (Game != null)
-                            Game.HandleServerIllegalAction(illegalAction.Message);
-                        else
-                        {
-                            _logger.LogError("Server claims illegal action in game - but there is no active game");
-                            Send(Packet.PacketTypeC2S.ForceResync);
-                        }
+                        _logger.LogError("Server claims illegal action in game - but there is no active game");
+                        Send(Packet.PacketTypeC2S.ForceResync);
                     }
+                }
                     break;
                 case Packet.PacketTypeS2C.NextTurn:
+                {
+                    if (Game != null)
                     {
-                        if (Game != null)
-                            Game.DoNextTurn();
-                        else
-                        {
-                            _logger.LogError($"Server sent turn end - but there is no active game");
-                            Send(Packet.PacketTypeC2S.ForceResync);
-                        }
+                        Game.DoNextTurn();
                     }
+                    else
+                    {
+                        _logger.LogError($"Server sent turn end - but there is no active game");
+                        Send(Packet.PacketTypeC2S.ForceResync);
+                    }
+                }
                     break;
                 case Packet.PacketTypeS2C.GameState:
-                    {
-                        var state = packet.GetPayload<GameState>();
-                        Game = state.State;
-                        state.State.SetGameDetails(state.YourIdentifier, state.GameIdentifier, this);
-                        state.State.RequestClientActions();
-                        OnGameStarted?.Invoke(this, new GameEventArgs(Game));
-                    }
+                {
+                    var state = packet.GetPayload<GameState>();
+                    Game = state.State;
+                    state.State.SetGameDetails(state.YourIdentifier, state.GameIdentifier, this);
+                    Game.RequestClientActions();
+                    OnGameStarted?.Invoke(this, new GameEventArgs(Game));
+                }
                     break;
                 case Packet.PacketTypeS2C.GameEnd:
-                    {
-                        var end = packet.GetPayload<GameEnd>(); // Todo
+                {
+                    var end = packet.GetPayload<GameEnd>(); // Todo
 
 
-                        Game = null;
-                    }
+                    Game = null;
+                }
                     break;
                 case Packet.PacketTypeS2C.UserState:
                     LastState = packet.GetPayload<UserState>();

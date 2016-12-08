@@ -13,10 +13,9 @@
     using JetBrains.Annotations;
     using Microsoft.Extensions.Logging;
 
-    public class EvadersServer : IServer, IRulesProvider
+    public class EvadersServer : IServer, IRulesProvider, IMatchmakingServer
     {
         public string Motd => _config.Motd;
-        public int MaxQueueCount => _config.MaxQueueCount;
         public string[] GameModes => _config.GameModes;
         public int MaxUsernameLength => _config.MaxUsernameLength;
         public bool ServerListening => _serverSocket.IsBound && !_serverSocket.Stopped;
@@ -55,19 +54,25 @@
 
             _matchmaking = new ConcurrentDictionary<string, IMatchmaking>(config.GameModes.ToDictionary(item => item, matchmakingFactory.Create));
             foreach (var keyValuePair in _matchmaking)
-            {
-                keyValuePair.Value.Supervisor = _supervisorFactory.Create(keyValuePair.Key);
-                keyValuePair.Value.OnSuggested += OnMatchmakingFoundMatchup;
-            }
+                keyValuePair.Value.Configure(this, _supervisorFactory.Create(keyValuePair.Key), keyValuePair.Key, config.MaxTimeInQueueSec);
             _config = config;
         }
 
-        public bool WouldAuthCollide(Guid login, IServerUser connectingUser, out IServerUser existingUser)
+        public void CreateGame(string gameMode, IMatchmaking source, IServerUser[] users)
         {
-            lock (_connectedUsers)
+            lock (_runningGames)
             {
-                existingUser = _connectedUsers.FirstOrDefault(item => (item.Key.Login == login) && (item.Key != connectingUser)).Key;
-                return existingUser != null;
+                _gameIdentifier++;
+
+                var game = new ServerGame(this, _supervisorFactory.Create(gameMode), users, _settingsFactory.Create(gameMode), _gameIdentifier, _logger);
+                foreach (var serverUser in users)
+                {
+                    source.LeaveQueue(serverUser);
+                    serverUser.SetIngame(game);
+                    game.HandleReconnect(serverUser);
+                }
+                if (!_runningGames.TryAdd(_gameIdentifier, game))
+                    _logger.LogError($"Cannot add game with ID: {game.GameIdentifier}, current is: {_gameIdentifier}");
             }
         }
 
@@ -101,10 +106,11 @@
             }
 
             lock (matchmaking)
+            {
                 matchmaking.EnterQueue(user);
+            }
 
             user.Send(Packet.PacketTypeS2C.UserState, new UserState(true, user.IsIngame, user.IsPassiveBot, user.Username, user.FullGameState));
-
         }
 
         public void HandleUserLeaveQueue(IServerUser user)
@@ -113,11 +119,12 @@
 
             if (matchmaking != null)
                 lock (matchmaking)
+                {
                     matchmaking.LeaveQueue(user);
+                }
 
             if (user.Connected)
                 user.Send(Packet.PacketTypeS2C.UserState, new UserState(false, user.IsIngame, user.IsPassiveBot, user.Username, user.FullGameState));
-
         }
 
         void IServer.Kick(IServerUser user)
@@ -143,9 +150,18 @@
             _runningGames.TryRemove(serverGame.GameIdentifier, out game);
         }
 
+        public bool WouldAuthCollide(Guid login, IServerUser connectingUser, out IServerUser existingUser)
+        {
+            lock (_connectedUsers)
+            {
+                existingUser = _connectedUsers.FirstOrDefault(item => (item.Key.Login == login) && (item.Key != connectingUser)).Key;
+                return existingUser != null;
+            }
+        }
+
         public void Start()
         {
-            if (_serverSocket != null || _serverSocketBson != null)
+            if ((_serverSocket != null) || (_serverSocketBson != null))
                 throw new InvalidOperationException("You can only start the server once");
 
             _logger.LogInformation("Setting up tcp accept socket");
@@ -180,7 +196,7 @@
         {
             lock (_connectedUsers)
             {
-                _connectedUsers.TryAdd(new User(socketAsyncEventArgs.AcceptSocket, _logger, this, this, new PacketTaskParser<PacketC2S>(_logger, Encoding.Unicode)), DateTime.Now);
+                _connectedUsers.TryAdd(new User(socketAsyncEventArgs.AcceptSocket, _logger, this, this, new PacketParserJson<PacketC2S>(_logger, Encoding.Unicode)), DateTime.Now);
             }
         }
 
@@ -194,26 +210,11 @@
 
         public void Update()
         {
+            foreach (var keyValuePair in _matchmaking)
+                keyValuePair.Value.Update();
+
             foreach (var keyValuePair in _runningGames)
                 keyValuePair.Value.Update();
-        }
-
-        private void OnMatchmakingFoundMatchup(object sender, Matchmaking.MatchCreatedArgs matchCreatedArgs)
-        {
-            lock (_runningGames)
-            {
-                _gameIdentifier++;
-
-                var game = new ServerGame(this, _supervisorFactory.Create(matchCreatedArgs.GameMode), matchCreatedArgs.Users, _settingsFactory.Create(matchCreatedArgs.GameMode), _gameIdentifier, _logger);
-                foreach (var serverUser in matchCreatedArgs.Users)
-                {
-                    matchCreatedArgs.Source.LeaveQueue(serverUser);
-                    serverUser.SetIngame(game);
-                    game.HandleReconnect(serverUser);
-                }
-                if (!_runningGames.TryAdd(_gameIdentifier, game))
-                    _logger.LogError($"Cannot add game with ID: {game.GameIdentifier}, current is: {_gameIdentifier}");
-            }
         }
     }
 }

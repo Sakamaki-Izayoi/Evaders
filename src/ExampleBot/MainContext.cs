@@ -10,10 +10,10 @@
 
     internal class MainContext : Context
     {
+        private readonly string _gameMode;
         private readonly HashSet<long> _ignoredProjectiles = new HashSet<long>();
         private readonly IQueuer _queuer;
         private readonly Random _rnd = new Random(BitConverter.ToInt32(Guid.NewGuid().ToByteArray(), 0));
-        private readonly string _gameMode;
 
         public MainContext(IContextManager contextManager, IQueuer queuer, string[] gameModes) : base(contextManager)
         {
@@ -51,8 +51,8 @@
                     }
 
                     var angle = MathHelper.ToRadians(_rnd.Next(0, 360));
-                    var dst = _rnd.Next(0, (int)game.Settings.ArenaRadius);
-                    assumedWaypoint = new Vector2(dst * Math.Sin(angle), dst * Math.Cos(angle));
+                    var dst = _rnd.Next(0, (int) game.Settings.ArenaRadius);
+                    assumedWaypoint = new Vector2(dst*Math.Sin(angle), dst*Math.Cos(angle));
 
                     //if (iterations == iterationsCount)
                     //    foreach (var l in minHits.Select(item => item.ProjectileIdentifier))
@@ -69,7 +69,7 @@
                     else
                     {
                         var turns = entity.GetNeededProjectileTurns(enemy.Position);
-                        entity.Shoot(enemy.GetPositionIn((uint)turns).ExtendedAway(entity.Position, 1337d));
+                        entity.Shoot(enemy.GetPositionIn((uint) turns).ExtendedAway(entity.Position, 1337d));
                     }
                 }
             }

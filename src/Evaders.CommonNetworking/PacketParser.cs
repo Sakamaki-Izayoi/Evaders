@@ -1,11 +1,6 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-
-namespace Evaders.CommonNetworking
+﻿namespace Evaders.CommonNetworking
 {
+    using System;
     using System.IO;
     using System.Net.Sockets;
     using Microsoft.Extensions.Logging;
@@ -56,7 +51,7 @@ namespace Evaders.CommonNetworking
                         currentOffset += sizeof(uint);
                     }
 
-                    var count = (int)Math.Min(socketAsyncEventArgs.BytesTransferred - (currentOffset - socketAsyncEventArgs.Offset), _waitingMsgLength.Value - _builderByteLength);
+                    var count = (int) Math.Min(socketAsyncEventArgs.BytesTransferred - (currentOffset - socketAsyncEventArgs.Offset), _waitingMsgLength.Value - _builderByteLength);
 
                     _packetBuilder.Write(socketAsyncEventArgs.Buffer, currentOffset, count);
 

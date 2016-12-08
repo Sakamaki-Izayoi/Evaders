@@ -11,7 +11,9 @@
         }
 
         [JsonConstructor]
-        protected Entity(CharacterData charData) : base(charData) { }
+        protected Entity(CharacterData charData, int health, Vector2 position, long entityIdentifier, long playerIdentifier, Vector2 movingTo, int lastShotTurn) : base(charData, health, position, entityIdentifier, playerIdentifier, movingTo, lastShotTurn)
+        {
+        }
 
         public void MoveTo(Vector2 coord)
         {

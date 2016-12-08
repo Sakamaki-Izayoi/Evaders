@@ -1,16 +1,11 @@
 ﻿namespace Evaders.ServerRunner.Windows
 {
     using System;
-    using System.Collections.Generic;
-    using System.IO;
     using System.ServiceProcess;
     using System.Threading;
     using Core.Game;
-    using Core.Utility;
     using Microsoft.Extensions.Logging;
     using Microsoft.Extensions.Logging.Console;
-    using Newtonsoft.Json;
-    using Newtonsoft.Json.Serialization;
     using Server;
     using Server.Integration;
 
@@ -26,7 +21,7 @@
                 throw new NotImplementedException();
 #pragma warning disable 162
                 ServiceBase[] ServicesToRun;
-                ServicesToRun = new ServiceBase[] { };
+                ServicesToRun = new ServiceBase[] {};
                 ServiceBase.Run(ServicesToRun);
                 return;
 #pragma warning restore 162
@@ -35,7 +30,7 @@
             var config = new ServerSettings();
             var logger = new ConsoleLogger("console", (m, l) => l >= LogLevel.Information, true);
             var supervisor = new EmptySupervisor();
-            var serv = new EvadersServer(new DefaultProviderFactory<IServerSupervisor>(item => supervisor), new DefaultProviderFactory<GameSettings>(item => GameSettings.Default), new DefaultProviderFactory<IMatchmaking>(item => new Matchmaking("Default", config.MaxTimeInQueueSec, logger)), logger, config);
+            var serv = new EvadersServer(new DefaultProviderFactory<IServerSupervisor>(item => supervisor), new DefaultProviderFactory<GameSettings>(item => GameSettings.Default), new DefaultProviderFactory<IMatchmaking>(item => new Matchmaking(logger)), logger, config);
             serv.Start();
 
             var wait = new SpinWait();

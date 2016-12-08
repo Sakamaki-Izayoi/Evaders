@@ -1,6 +1,5 @@
 ﻿namespace Evaders.Core.Utility
 {
-    using System;
     using System.Globalization;
     using System.IO;
     using System.Text;
@@ -13,7 +12,7 @@
         {
             using (var reader = new JsonTextReader(new StringReader(json)))
             {
-                return (T)serializer.Deserialize(reader, typeof(T));
+                return (T) serializer.Deserialize(reader, typeof(T));
             }
         }
 
@@ -47,7 +46,7 @@
             using (var reader = new BsonReader(data))
             {
                 reader.CloseInput = false;
-                return (T)serializer.Deserialize(reader, typeof(T));
+                return (T) serializer.Deserialize(reader, typeof(T));
             }
         }
     }

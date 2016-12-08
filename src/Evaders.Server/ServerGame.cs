@@ -8,7 +8,6 @@
     using CommonNetworking;
     using CommonNetworking.CommonPayloads;
     using Core.Game;
-    using Extensions;
     using Integration;
     using JetBrains.Annotations;
     using Microsoft.Extensions.Logging;
@@ -64,9 +63,8 @@
                         {
                             _logger.LogTrace($"Forcing advancement of game {GameIdentifier}");
                             foreach (var user in Users.Where(usr => usr.Connected && !IsUserReady(usr)))
-                                //_turnEndUsers[user] = true;
                                 OnIllegalAction(user, $"You took too long for your turn. The longest you may think is: {Settings.MaxTurnTimeSec} sec. You skipped the turn!");
-                            //user.Dispose(); // rip socket
+
                             NextTurn();
                         }
                     }
@@ -88,19 +86,16 @@
                     return;
                 }
                 _turnEndUsers[from] = true;
+
+                PossibleEndTurn();
             }
-
-
-            PossibleEndTurn(); // This is not inside the lock on purpose (deadlock)
         }
 
         private bool IsUserReady(IServerUser user)
         {
             bool ready;
             if (!_turnEndUsers.TryGetValue(user, out ready))
-            {
                 _logger.LogWarning($"Either {user} is being a bad boy or the {nameof(_turnEndUsers)} dict is bad.");
-            }
             return ready;
         }
 
@@ -173,21 +168,19 @@
 
             var winner = Entities.Any() ? Users.First(usr => usr.Identifier == Entities.First().PlayerIdentifier) : null;
             foreach (var serverUser in Users)
-                serverUser.Send(Packet.PacketTypeS2C.GameEnd, new GameEnd(GameIdentifier, Users.ToArray(), serverUser.Identifier == winner?.Identifier, winner));
+                serverUser.Send(Packet.PacketTypeS2C.GameEnd, new GameEnd(GameIdentifier, Users.ToArray(), serverUser.Identifier == winner?.Identifier, winner?.Identifier ?? -1));
             if (winner == null)
                 return;
 
             _supervisor.GameEnded(this, winner.Login, Users.Where(usr => usr.Identifier != winner.Identifier).Select(usr => usr.Login).ToArray());
 
             foreach (var serverUser in Users)
-            {
                 serverUser.SetIngame(null);
-            }
         }
 
         protected override void OnIllegalAction(IServerUser user, string warningMsg)
         {
-            user.Send(Packet.PacketTypeS2C.IllegalAction, new IllegalAction(warningMsg, true, GameIdentifier));
+            user.Send(Packet.PacketTypeS2C.IllegalAction, new IllegalAction(warningMsg, true));
         }
 
         protected override bool BeforeHandleAction(IServerUser from, GameAction action)

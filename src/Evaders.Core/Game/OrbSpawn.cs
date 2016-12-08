@@ -1,11 +1,6 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-
-namespace Evaders.Core.Game
+﻿namespace Evaders.Core.Game
 {
+    using System;
     using Newtonsoft.Json;
     using Utility;
 
@@ -16,11 +11,10 @@ namespace Evaders.Core.Game
         [JsonProperty]
         public abstract int LastCollectedTurn { get; protected set; }
 
-        public int NextSpawnTurn => LastCollectedTurn + (int)Math.Ceiling(Game.Settings.HealorbRespawnSec / Game.TimePerFrameSec);
+        public int NextSpawnTurn => LastCollectedTurn + (int) Math.Ceiling(Game.Settings.HealorbRespawnSec/Game.TimePerFrameSec);
         public bool IsUp => NextSpawnTurn <= Game.Turn;
 
-        [JsonProperty]
-        public readonly Vector2 Position;
+        [JsonProperty] public readonly Vector2 Position;
 
         internal GameBase Game;
 
@@ -43,13 +37,11 @@ namespace Evaders.Core.Game
 
             var pickedUp = false; // If multiple entities pick it up in the same frame, each of them will get the heal
             foreach (var entity in Game.Entities)
-            {
-                if (entity.Position.Distance(Position, true) <= (HitboxSize + entity.HitboxSize) * (HitboxSize + entity.HitboxSize))
+                if (entity.Position.Distance(Position, true) <= (HitboxSize + entity.HitboxSize)*(HitboxSize + entity.HitboxSize))
                 {
                     OnPickedUp(entity);
                     pickedUp = true;
                 }
-            }
             if (pickedUp)
                 LastCollectedTurn = Game.Turn;
         }

@@ -1,11 +1,6 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-
-namespace Evaders.Core.Game
+﻿namespace Evaders.Core.Game
 {
+    using System.Collections.Generic;
     using Utility;
 
     public class DefaultMapGenerator : IMapGenerator
@@ -13,10 +8,10 @@ namespace Evaders.Core.Game
         public IEnumerable<Vector2> GetEntityPositions(int entityCount, GameSettings settings)
         {
             var unitUp = new Vector2(0, -1);
-            var rotateBy = 360f / entityCount;
+            var rotateBy = 360f/entityCount;
             for (var i = 0; i < entityCount; i++)
             {
-                yield return unitUp * (settings.ArenaRadius - settings.DefaultCharacterData.HitboxSize);
+                yield return unitUp*(settings.ArenaRadius - settings.DefaultCharacterData.HitboxSize);
                 unitUp = unitUp.RotatedDegrees(rotateBy);
             }
         }
@@ -25,10 +20,10 @@ namespace Evaders.Core.Game
         {
             entityCount *= 3;
             var unitUp = new Vector2(0, -1);
-            var rotateBy = 360f / (entityCount);
+            var rotateBy = 360f/entityCount;
             for (var i = 0; i < entityCount; i++)
             {
-                yield return unitUp * (settings.ArenaRadius / 2 - settings.DefaultCharacterData.HitboxSize);
+                yield return unitUp*(settings.ArenaRadius/2 - settings.DefaultCharacterData.HitboxSize);
                 unitUp = unitUp.RotatedDegrees(rotateBy);
             }
         }

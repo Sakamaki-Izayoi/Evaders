@@ -1,6 +1,5 @@
 ﻿namespace Evaders.Server
 {
-    using System;
     using System.Collections.Generic;
     using System.Diagnostics;
     using System.Linq;
@@ -10,35 +9,18 @@
 
     public class Matchmaking : IMatchmaking
     {
-        public class MatchCreatedArgs : EventArgs
-        {
-            public readonly string GameMode;
-            public readonly IMatchmaking Source;
-            public readonly IServerUser[] Users;
-
-            public MatchCreatedArgs(IMatchmaking source, string gameMode, params IServerUser[] users)
-            {
-                Users = users;
-                Source = source;
-                GameMode = gameMode;
-            }
-        }
-
-        public event EventHandler<MatchCreatedArgs> OnSuggested;
         public IServerSupervisor Supervisor { get; set; }
-        public IEnumerable<IServerUser> InQueue => _inQueue;
-        private readonly string _gameMode;
         private readonly List<IServerUser> _inQueue = new List<IServerUser>();
         private readonly Dictionary<IServerUser, double> _joinedQueueTime = new Dictionary<IServerUser, double>();
         private readonly ILogger _logger;
-        private readonly float _maxTimeInQueue;
         private readonly Stopwatch _time = Stopwatch.StartNew();
+        private string _gameMode;
         private double _lastQueuerTime;
+        private double _maxTimeInQueue;
+        private IMatchmakingServer _server;
 
-        public Matchmaking(string gameMode, float maxTimeInQueue, ILogger logger)
+        public Matchmaking(ILogger logger)
         {
-            _gameMode = gameMode;
-            _maxTimeInQueue = maxTimeInQueue;
             _logger = logger;
         }
 
@@ -47,8 +29,10 @@
             if (_inQueue.DistinctBy(item => item.Login).Count() < 2)
                 return;
 
+            var time = _time.Elapsed.TotalSeconds;
+
             for (var i = 0; i < _inQueue.Count; i++)
-                if (_joinedQueueTime[_inQueue[i]] > _maxTimeInQueue)
+                if (time - _joinedQueueTime[_inQueue[i]] > _maxTimeInQueue)
                 {
                     var hoomanBots = _inQueue.Where(usr => !usr.IsPassiveBot && (usr != _inQueue[i])).ToArray();
                     if (hoomanBots.Any())
@@ -68,7 +52,7 @@
                         }
 
                         _logger.LogDebug($"{_inQueue[i]} found a match: {bestHoomanBot})");
-                        OnSuggested?.Invoke(this, new MatchCreatedArgs(this, _gameMode, bestHoomanBot, _inQueue[i]));
+                        OnFoundMatchup(bestHoomanBot, _inQueue[i]);
                     }
                     else
                     {
@@ -82,9 +66,19 @@
                         }
 
                         _logger.LogDebug($"{_inQueue[i]} exceeded max queue time, matching with bot: {bestBotBot})");
-                        OnSuggested?.Invoke(this, new MatchCreatedArgs(this, _gameMode, bestBotBot, _inQueue[i]));
+                        OnFoundMatchup(bestBotBot, _inQueue[i]);
                     }
                 }
+        }
+
+        public void Configure(IMatchmakingServer server, IServerSupervisor supervisor, string gameMode, double maxTimeInQueueSec)
+        {
+            Supervisor = supervisor;
+            _server = server;
+            _gameMode = gameMode;
+            _maxTimeInQueue = maxTimeInQueueSec;
+
+            _logger.LogDebug("Configured matchmaking: " + gameMode);
         }
 
         public bool HasUser(IServerUser user)
@@ -107,7 +101,7 @@
                 else
                 {
                     _logger.LogDebug($"Found a match (Queue very empty for a longer time, matching with bot: {bestBotBot})");
-                    OnSuggested?.Invoke(this, new MatchCreatedArgs(this, _gameMode, user, bestBotBot));
+                    OnFoundMatchup(user, bestBotBot);
                     return;
                 }
             }
@@ -117,12 +111,6 @@
                 _lastQueuerTime = time;
 
             AddUser(user);
-            var autoBestMatch = _inQueue.FirstOrDefault(usr => (usr != user) && !usr.HasEverPlayedAgainst(user, Supervisor));
-            if (autoBestMatch != null)
-            {
-                _logger.LogDebug($"Found a match (never played against {autoBestMatch})");
-                OnSuggested?.Invoke(this, new MatchCreatedArgs(this, _gameMode, autoBestMatch, user));
-            }
         }
 
         public void LeaveQueue(IServerUser user)
@@ -131,16 +119,16 @@
             _logger.LogDebug($"{user} left matchmaking");
         }
 
-        public void LeaveQueueCompletely(IServerUser user)
+        private void OnFoundMatchup(params IServerUser[] users)
         {
-            _inQueue.RemoveAll(usr => usr == user);
-            _logger.LogDebug($"{user} left matchmaking completely");
+            _server.CreateGame(_gameMode, this, users);
         }
+
 
         private void AddUser(IServerUser user)
         {
             _inQueue.Add(user);
-            _joinedQueueTime[user] = _time.Elapsed.TotalMilliseconds;
+            _joinedQueueTime[user] = _time.Elapsed.TotalSeconds;
             _logger.LogDebug($"{user} entered matchmaking");
         }
     }
