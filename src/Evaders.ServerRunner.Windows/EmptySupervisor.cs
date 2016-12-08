@@ -9,10 +9,11 @@
 
     internal class EmptySupervisor : IServerSupervisor
     {
+        public bool IsRecording => false;
 
-        public void GameEndedTurn(ServerGame game, List<Tuple<EntityBase, ServerGame.ChangeKind>> changedEntities, List<Tuple<Projectile, ServerGame.ChangeKind>> changedProjectiles, List<OrbSpawn> changedOrbSpawns, List<GameAction> executedGameActions)
+        public void GameEndedTurn(ServerGame game, GameChangeTracker tracker)
         {
-            
+            throw new NotImplementedException();
         }
 
         public void GameEnded(ServerGame game, Guid winnersIdentifiers, Guid[] loosersIdentifier)

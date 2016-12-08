@@ -6,7 +6,9 @@
 
     public interface IServerSupervisor
     {
-        void GameEndedTurn(ServerGame game, List<Tuple<EntityBase, ServerGame.ChangeKind>> changedEntities, List<Tuple<Projectile, ServerGame.ChangeKind>> changedProjectiles, List<OrbSpawn> changedOrbSpawns, List<GameAction> executedGameActions);
+        bool IsRecording { get; }
+
+        void GameEndedTurn(ServerGame game, GameChangeTracker tracker);
         void GameEnded(ServerGame game, Guid winnersIdentifiers, Guid[] loosersIdentifier);
         Guid GetBestChoice(Guid player, IEnumerable<Guid> possibleOpponents);
     }

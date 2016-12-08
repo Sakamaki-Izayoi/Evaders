@@ -22,15 +22,8 @@
         private readonly IServerSupervisor _supervisor;
         private readonly Stopwatch _time = Stopwatch.StartNew();
         private readonly ConcurrentDictionary<IServerUser, bool> _turnEndUsers = new ConcurrentDictionary<IServerUser, bool>();
-
         private readonly object _updateLock = new object();
-
-        private readonly List<Tuple<EntityBase, ChangeKind>> _changedEntities = new List<Tuple<EntityBase, ChangeKind>>();
-        private readonly List<Tuple<Projectile, ChangeKind>> _changedProjectiles = new List<Tuple<Projectile, ChangeKind>>();
-        private readonly List<OrbSpawn> _changedOrbSpawners = new List<OrbSpawn>();
-        private readonly List<GameAction> _executedGameActions = new List<GameAction>();
-
-        public enum ChangeKind { Spawn, Death, Health }
+        private readonly GameChangeTracker _tracker;
 
         [JsonProperty]
         public readonly long GameIdentifier;
@@ -54,6 +47,8 @@
             _supervisor = supervisor;
             GameIdentifier = gameIdentifier;
             _logger = logger;
+
+            if (_supervisor.IsRecording) _tracker = new GameChangeTracker();
 
             InitTurnEndStates();
         }
@@ -149,7 +144,7 @@
         {
             foreach (var serverUser in Users.Where(user => !user.FullGameState))
                 serverUser.Send(Packet.PacketTypeS2C.ConfirmedGameAction, action);
-            _executedGameActions.Add(action);
+            _tracker?.ExecutedGameActions.Add(action);
         }
 
         private void InitTurnEndStates()
@@ -167,49 +162,49 @@
                 serverUser.Send(Packet.PacketTypeS2C.NextTurn);
             _lastFrameSec = _time.Elapsed.TotalSeconds;
 
-            _supervisor.GameEndedTurn(this, _changedEntities, _changedProjectiles, _changedOrbSpawners, _executedGameActions);
+            _supervisor.GameEndedTurn(this, _tracker);
 
-            _changedEntities.Clear();// = new List<Tuple<EntityBase, ChangeKind>>();
-            _changedProjectiles.Clear();// = new List<Tuple<Projectile, ChangeKind>>();
-            _executedGameActions.Clear();// = new List<GameAction>();
-            _changedOrbSpawners.Clear();// = new List<OrbSpawn>();
+            _tracker?.ChangedEntities.Clear();// = new List<Tuple<EntityBase, ChangeKind>>();
+            _tracker?.ChangedProjectiles.Clear();// = new List<Tuple<Projectile, ChangeKind>>();
+            _tracker?.ExecutedGameActions.Clear();// = new List<GameAction>();
+            _tracker?.ChangedOrbSpawners.Clear();// = new List<OrbSpawn>();
         }
 
         protected override Entity SpawnEntity(Vector2 position, long playerIdentifier, CharacterData charData)
         {
             var entity = base.SpawnEntity(position, playerIdentifier, charData);
-            _changedEntities.Add(new Tuple<EntityBase, ChangeKind>(entity, ChangeKind.Spawn));
+            _tracker?.ChangedEntities.Add(new Tuple<EntityBase, GameChangeTracker.ChangeKind>(entity, GameChangeTracker.ChangeKind.Spawn));
             return entity;
         }
 
         protected override Projectile SpawnProjectile(Vector2 direction, EntityBase entity)
         {
             var projectile = base.SpawnProjectile(direction, entity);
-            _changedProjectiles.Add(new Tuple<Projectile, ChangeKind>(projectile, ChangeKind.Spawn));
+            _tracker?.ChangedProjectiles.Add(new Tuple<Projectile, GameChangeTracker.ChangeKind>(projectile, GameChangeTracker.ChangeKind.Spawn));
             return projectile;
         }
 
         protected override void HandleDeath(EntityBase entity)
         {
-            _changedEntities.Add(new Tuple<EntityBase, ChangeKind>(entity, ChangeKind.Death));
+            _tracker?.ChangedEntities.Add(new Tuple<EntityBase, GameChangeTracker.ChangeKind>(entity, GameChangeTracker.ChangeKind.Death));
             base.HandleDeath(entity);
         }
 
         protected override void HandleDeath(Projectile projectile)
         {
-            _changedProjectiles.Add(new Tuple<Projectile, ChangeKind>(projectile, ChangeKind.Death));
+            _tracker?.ChangedProjectiles.Add(new Tuple<Projectile, GameChangeTracker.ChangeKind>(projectile, GameChangeTracker.ChangeKind.Death));
             base.HandleDeath(projectile);
         }
 
         protected override void HandleEntityHealthChanged(EntityBase entity)
         {
-            _changedEntities.Add(new Tuple<EntityBase, ChangeKind>(entity, ChangeKind.Health));
+            _tracker?.ChangedEntities.Add(new Tuple<EntityBase, GameChangeTracker.ChangeKind>(entity, GameChangeTracker.ChangeKind.Health));
             base.HandleEntityHealthChanged(entity);
         }
 
         protected override void HandleOrbChangedState(OrbSpawn spawn)
         {
-            _changedOrbSpawners.Add(spawn);
+            _tracker?.ChangedOrbSpawners.Add(spawn);
             base.HandleOrbChangedState(spawn);
         }
 

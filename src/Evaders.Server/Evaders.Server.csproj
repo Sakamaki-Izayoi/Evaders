@@ -41,6 +41,7 @@
   <ItemGroup>
     <Compile Include="EvadersServer.cs" />
     <Compile Include="Extensions\UserStatisticsExtensions.cs" />
+    <Compile Include="GameChangeTracker.cs" />
     <Compile Include="IMatchmaking.cs" />
     <Compile Include="IMatchmakingServer.cs" />
     <Compile Include="Integration\IFactory.cs" />
