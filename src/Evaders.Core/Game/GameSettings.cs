@@ -9,33 +9,46 @@
         public virtual bool IsValid => (ArenaRadius > 0) && (TurnsPerSecond > 0) && (MaxTurnTimeSec > 0) && DefaultCharacterData.IsValid && (ArenaShrinkStartTurn >= 0) && (ArenaShrinkPerSec > 0f) && (OutOfArenaDamagePerTurn > 0) && (HealorbHitboxSize >= 0) && (HealorbHealAmount > 0) && (HealorbRespawnSec > 0) && (CloneorbHitboxSize >= 0) && (CloneorbRespawnSec > 0);
 
         [JsonProperty]
-        public int ArenaShrinkStartTurn => (int) Math.Ceiling(ArenaShrinkStartSec/(1d/TurnsPerSecond));
+        public int ArenaShrinkStartTurn => (int)Math.Ceiling(ArenaShrinkStartSec / (1d / TurnsPerSecond));
 
-        [JsonProperty] public readonly double ArenaRadius;
+        [JsonProperty]
+        public double ArenaRadius { get; set; }
 
-        [JsonProperty] public readonly double ArenaShrinkPerSec;
+        [JsonProperty]
+        public double ArenaShrinkPerSec { get; set; }
 
-        [JsonProperty] public readonly double ArenaShrinkStartSec;
+        [JsonProperty]
+        public double ArenaShrinkStartSec { get; set; }
 
-        [JsonProperty] public readonly int CloneorbHitboxSize;
+        [JsonProperty]
+        public int CloneorbHitboxSize { get; set; }
 
-        [JsonProperty] public readonly double CloneorbRespawnSec;
+        [JsonProperty]
+        public double CloneorbRespawnSec { get; set; }
 
-        [JsonProperty] public readonly CharacterData DefaultCharacterData;
+        [JsonProperty]
+        public CharacterData DefaultCharacterData { get; set; }
 
-        [JsonProperty] public readonly int HealorbHealAmount;
+        [JsonProperty]
+        public int HealorbHealAmount { get; set; }
 
-        [JsonProperty] public readonly int HealorbHitboxSize;
+        [JsonProperty]
+        public int HealorbHitboxSize { get; set; }
 
-        [JsonProperty] public readonly double HealorbRespawnSec;
+        [JsonProperty]
+        public double HealorbRespawnSec { get; set; }
 
-        [JsonProperty] public readonly double MaxTurnTimeSec;
+        [JsonProperty]
+        public double MaxTurnTimeSec { get; set; }
 
-        [JsonProperty] public readonly int OutOfArenaDamagePerTurn;
+        [JsonProperty]
+        public int OutOfArenaDamagePerTurn { get; set; }
 
-        [JsonProperty] public readonly double ProjectileLifeTimeSec;
+        [JsonProperty]
+        public double ProjectileLifeTimeSec { get; set; }
 
-        [JsonProperty] public readonly int TurnsPerSecond;
+        [JsonProperty]
+        public int TurnsPerSecond { get; set; }
 
 
         [JsonConstructor]
@@ -55,5 +68,7 @@
             MaxTurnTimeSec = maxTurnTimeSec;
             ProjectileLifeTimeSec = projectileLifeTimeSec;
         }
+
+        public GameSettings() { }
     }
 }

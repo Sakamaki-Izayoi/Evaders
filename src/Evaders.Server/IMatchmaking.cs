@@ -1,5 +1,8 @@
 ﻿namespace Evaders.Server
 {
+    using System;
+    using System.Collections;
+    using System.Collections.Generic;
     using Integration;
 
     public interface IMatchmaking
@@ -12,6 +15,8 @@
         void EnterQueue(IServerUser user);
 
         void LeaveQueue(IServerUser user);
+
+        IEnumerable<IServerUser> RemoveAll();
 
         void Update();
     }

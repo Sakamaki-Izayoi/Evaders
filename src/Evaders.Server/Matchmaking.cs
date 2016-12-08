@@ -24,6 +24,14 @@
             _logger = logger;
         }
 
+        public IEnumerable<IServerUser> RemoveAll()
+        {
+            var users = _inQueue.ToArray();
+            _inQueue.Clear();
+            _joinedQueueTime.Clear();
+            return users;
+        }
+
         public void Update()
         {
             if (_inQueue.DistinctBy(item => item.Login).Count() < 2)

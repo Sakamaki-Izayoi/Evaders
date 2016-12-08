@@ -9,17 +9,13 @@
 
     internal class EmptySupervisor : IServerSupervisor
     {
-        private class WinStats : IWinStatistics
+
+        public void GameEndedTurn(ServerGame game, List<Tuple<EntityBase, ServerGame.ChangeKind>> changedEntities, List<Tuple<Projectile, ServerGame.ChangeKind>> changedProjectiles, List<OrbSpawn> changedOrbSpawns, List<GameAction> executedGameActions)
         {
-            public int Wins { get; }
-            public int Losses { get; }
+            
         }
 
-        public void GameEndedTurn(GameBase game)
-        {
-        }
-
-        public void GameEnded(GameBase game, Guid winnersIdentifiers, Guid[] loosersIdentifier)
+        public void GameEnded(ServerGame game, Guid winnersIdentifiers, Guid[] loosersIdentifier)
         {
         }
 
@@ -28,14 +24,5 @@
             return possibleOpponents.First();
         }
 
-        public IWinStatistics GetWinStatistics(Guid player, Guid against)
-        {
-            return new WinStats();
-        }
-
-        public string GetMotd()
-        {
-            return "Hewlo :)";
-        }
     }
 }

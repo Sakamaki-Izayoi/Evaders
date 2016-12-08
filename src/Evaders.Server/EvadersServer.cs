@@ -3,6 +3,7 @@
     using System;
     using System.Collections.Concurrent;
     using System.Linq;
+    using System.Net;
     using System.Net.Sockets;
     using System.Text;
     using System.Threading;
@@ -15,23 +16,32 @@
 
     public class EvadersServer : IServer, IRulesProvider, IMatchmakingServer
     {
-        public string Motd => _config.Motd;
-        public string[] GameModes => _config.GameModes;
-        public int MaxUsernameLength => _config.MaxUsernameLength;
+        public string Motd => _configMotd;
+        public string[] GameModes => _configGameModes;
+        public int MaxUsernameLength => _configMaxUsernameLength;
         public bool ServerListening => _serverSocket.IsBound && !_serverSocket.Stopped;
         public bool BsonServerListening => _serverSocketBson.IsBound && !_serverSocketBson.Stopped;
-        private readonly ServerSettings _config;
         private readonly ConcurrentDictionary<IServerUser, DateTime> _connectedUsers = new ConcurrentDictionary<IServerUser, DateTime>();
         private readonly ILogger _logger;
-        private readonly ConcurrentDictionary<string, IMatchmaking> _matchmaking;
+        private ConcurrentDictionary<string, IMatchmaking> _matchmaking;
         private readonly ConcurrentDictionary<long, ServerGame> _runningGames = new ConcurrentDictionary<long, ServerGame>();
         private readonly IProviderFactory<GameSettings> _settingsFactory;
+        private readonly IProviderFactory<IMatchmaking> _matchmakingFactory;
         private readonly IProviderFactory<IServerSupervisor> _supervisorFactory;
         private long _gameIdentifier;
         private EasyTaskSocket _serverSocket;
         private EasyTaskSocket _serverSocketBson;
         private long _userIdentifier;
 
+        private string _configMotd;
+        private string[] _configGameModes;
+        private int _configMaxUsernameLength;
+        private IPAddress _configIpAddress;
+        private ushort _configPort;
+        private ushort _configBSONPort;
+        private double _configMaxTimeInQueueSec;
+
+        private readonly object _applySettingsLock = new object();
 
         public EvadersServer([NotNull] IProviderFactory<IServerSupervisor> supervisorFactory, [NotNull] IProviderFactory<GameSettings> settingsFactory, [NotNull] IProviderFactory<IMatchmaking> matchmakingFactory, [NotNull] ILogger logger, [NotNull] ServerSettings config)
         {
@@ -50,12 +60,99 @@
 
             _supervisorFactory = supervisorFactory;
             _settingsFactory = settingsFactory;
+            _matchmakingFactory = matchmakingFactory;
             _logger = logger;
 
-            _matchmaking = new ConcurrentDictionary<string, IMatchmaking>(config.GameModes.ToDictionary(item => item, matchmakingFactory.Create));
-            foreach (var keyValuePair in _matchmaking)
-                keyValuePair.Value.Configure(this, _supervisorFactory.Create(keyValuePair.Key), keyValuePair.Key, config.MaxTimeInQueueSec);
-            _config = config;
+            WriteSettings(config);
+            SetupMatchmaking();
+        }
+
+        private void SetupMatchmaking()
+        {
+            _logger.LogInformation("Setting up matchmaking");
+            lock (_applySettingsLock)
+            {
+                if (_matchmaking == null)
+                    _matchmaking = new ConcurrentDictionary<string, IMatchmaking>(_configGameModes.ToDictionary(item => item, _matchmakingFactory.Create));
+                else
+                {
+                    var droppedModes = _matchmaking.Where(item => !_configGameModes.Contains(item.Key)).ToArray();
+                    foreach (var dropped in droppedModes)
+                    {
+                        var droppedUsers = dropped.Value.RemoveAll();
+                        foreach (var serverUser in droppedUsers)
+                        {
+                            serverUser.Send(Packet.PacketTypeS2C.UserState, new UserState(false, serverUser.IsIngame, serverUser.IsPassiveBot, serverUser.Username, serverUser.FullGameState));
+                        }
+                    }
+
+                    foreach (var mode in _configGameModes.Where(item => !_matchmaking.ContainsKey(item)))
+                    {
+                        _matchmaking.TryAdd(mode, _matchmakingFactory.Create(mode));
+                    }
+                }
+
+                foreach (var keyValuePair in _matchmaking)
+                    keyValuePair.Value.Configure(this, _supervisorFactory.Create(keyValuePair.Key), keyValuePair.Key, _configMaxTimeInQueueSec);
+            }
+        }
+
+        private void WriteSettings(ServerSettings settings)
+        {
+            lock (_applySettingsLock)
+            {
+                _configMaxUsernameLength = settings.MaxUsernameLength;
+                _configBSONPort = settings.BSONPort;
+                _configPort = settings.Port;
+                _configGameModes = settings.GameModes;
+                _configIpAddress = settings.IP;
+                _configMotd = settings.Motd;
+                _configMaxTimeInQueueSec = settings.MaxTimeInQueueSec;
+            }
+        }
+
+        public void ApplySettings(ServerSettings settings = null)
+        {
+            lock (_applySettingsLock)
+            {
+                if (settings != null) WriteSettings(settings);
+
+                if (_serverSocket == null || !_configIpAddress.Equals(((IPEndPoint)_serverSocket.Socket.LocalEndPoint).Address))
+                    Start();
+
+                SetupMatchmaking();
+            }
+        }
+
+        public void Start()
+        {
+            lock (_applySettingsLock)
+            {
+                if ((_serverSocket != null) || (_serverSocketBson != null))
+                {
+                    _serverSocket?.Dispose();
+                    _serverSocketBson?.Dispose();
+                }
+
+                _logger.LogInformation("Setting up tcp accept socket");
+
+                var listener = new TcpListener(_configIpAddress, _configPort);
+                var listenerBson = new TcpListener(_configIpAddress, _configBSONPort);
+
+                listener.Start();
+                listenerBson.Start();
+
+                _serverSocket = new EasyTaskSocket(listener.Server);
+                _serverSocketBson = new EasyTaskSocket(listenerBson.Server);
+
+                _serverSocket.OnAccepted += OnClientConnectedJson;
+                _serverSocketBson.OnAccepted += OnClientConnectedBson;
+
+                if (!_serverSocket.StartJobs(EasyTaskSocket.SocketTasks.Accept) || !_serverSocketBson.StartJobs(EasyTaskSocket.SocketTasks.Accept))
+                    throw new Exception("Could not start network jobs");
+
+                _logger.LogInformation("Server online!");
+            }
         }
 
         public void CreateGame(string gameMode, IMatchmaking source, IServerUser[] users)
@@ -157,31 +254,6 @@
                 existingUser = _connectedUsers.FirstOrDefault(item => (item.Key.Login == login) && (item.Key != connectingUser)).Key;
                 return existingUser != null;
             }
-        }
-
-        public void Start()
-        {
-            if ((_serverSocket != null) || (_serverSocketBson != null))
-                throw new InvalidOperationException("You can only start the server once");
-
-            _logger.LogInformation("Setting up tcp accept socket");
-
-            var listener = new TcpListener(_config.IP, _config.Port);
-            var listenerBson = new TcpListener(_config.IP, _config.BSONPort);
-
-            listener.Start();
-            listenerBson.Start();
-
-            _serverSocket = new EasyTaskSocket(listener.Server);
-            _serverSocketBson = new EasyTaskSocket(listenerBson.Server);
-
-            _serverSocket.OnAccepted += OnClientConnectedJson;
-            _serverSocketBson.OnAccepted += OnClientConnectedBson;
-
-            if (!_serverSocket.StartJobs(EasyTaskSocket.SocketTasks.Accept) || !_serverSocketBson.StartJobs(EasyTaskSocket.SocketTasks.Accept))
-                throw new Exception("Could not start network jobs");
-
-            _logger.LogInformation("Server online!");
         }
 
 

@@ -10,7 +10,7 @@
 
     public abstract class Game<TUser> : GameBase where TUser : IUser
     {
-        public override double TimePerFrameSec => 1d/Settings.TurnsPerSecond;
+        public override double TimePerFrameSec => 1d / Settings.TurnsPerSecond;
         public bool GameEnded => _entities.All(entity => entity.Value.PlayerIdentifier == _entities.FirstOrDefault().Value?.PlayerIdentifier);
 
         [JsonProperty]
@@ -40,9 +40,11 @@
         private readonly ConcurrentDictionary<TUser, ConcurrentBag<GameAction>> _users;
         protected readonly object NextTurnLock = new object();
 
-        [JsonProperty("LastEntityIdentifier")] private long _entityIdentifier;
+        [JsonProperty("LastEntityIdentifier")]
+        private long _entityIdentifier;
 
-        [JsonProperty("LastProjectileIdentifier")] private long _projectileIdentifier;
+        [JsonProperty("LastProjectileIdentifier")]
+        private long _projectileIdentifier;
 
         protected Game(IEnumerable<TUser> users, GameSettings settings, IEnumerable<Entity> entities, IEnumerable<Projectile> projectiles, IEnumerable<HealOrbSpawn> healSpawns, CloneOrbSpawn clonerSpawn, long lastEntityIdentifier, long lastProjectileIdentifier) : base(settings)
         {
@@ -106,7 +108,7 @@
                                 result = controlledEntity.ShootInternal(gameAction.Position);
                                 break;
                             default:
-                                OnIllegalAction(user.Key, "Unknown Action: " + (int) gameAction.Type);
+                                OnIllegalAction(user.Key, "Unknown Action: " + (int)gameAction.Type);
                                 continue;
                         }
                         if (!result)
@@ -192,11 +194,13 @@
             return AddAction(user, action);
         }
 
-        protected internal override void SpawnProjectile(Vector2 direction, EntityBase entity)
+        protected internal override Projectile SpawnProjectile(Vector2 direction, EntityBase entity)
         {
             var projectileIdentifier = ++_projectileIdentifier;
-            if (!_projectiles.TryAdd(projectileIdentifier, new Projectile(direction.Unit, entity, this, projectileIdentifier)))
+            var proj = new Projectile(direction.Unit, entity, this, projectileIdentifier);
+            if (!_projectiles.TryAdd(projectileIdentifier, proj))
                 throw new Exception("Could not spawn projectile with id: " + projectileIdentifier);
+            return proj;
         }
 
         protected internal override Entity SpawnEntity(Vector2 position, long playerIdentifier, CharacterData charData)
@@ -226,7 +230,7 @@
 
         protected internal override void HandleDeath(EntityBase entity)
         {
-            _toRemoveEntities.Add((Entity) entity);
+            _toRemoveEntities.Add((Entity)entity);
         }
 
         protected internal override void HandleDeath(Projectile projectile)
