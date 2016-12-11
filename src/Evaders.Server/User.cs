@@ -168,7 +168,7 @@
                         return;
                     }
 
-                    _myGame.AddGameAction(this, packet.GetPayload<GameAction>());
+                    _myGame.AddGameAction(this, packet.GetPayload<LiveGameAction>());
                     break;
                 case Packet.PacketTypeC2S.SwitchQueueMode:
                     IsPassiveBot = !IsPassiveBot;
@@ -187,7 +187,7 @@
                         return;
                     }
 
-                    _myGame.UserRequestsEndTurn(this);
+                    _myGame.UserRequestsEndTurn(this, packet.GetPayload<TurnEnd>()?.Turn ?? -1);
                     break;
                 case Packet.PacketTypeC2S.ForceResync:
                     if (_myGame == null)

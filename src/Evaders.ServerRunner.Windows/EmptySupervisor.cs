@@ -13,7 +13,7 @@
 
         public void GameEndedTurn(ServerGame game, GameChangeTracker tracker)
         {
-            throw new NotImplementedException();
+            
         }
 
         public void GameEnded(ServerGame game, Guid winnersIdentifiers, Guid[] loosersIdentifier)

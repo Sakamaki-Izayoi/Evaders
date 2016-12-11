@@ -75,8 +75,14 @@
             }
         }
 
-        public void UserRequestsEndTurn(IServerUser from)
+        public void UserRequestsEndTurn(IServerUser from, int turn = -1)
         {
+            if (turn >= 0 && turn != Turn)
+            {
+                _logger.LogDebug($"Rejecting actions of lagging user: {from} (response after turn end)");
+                return;
+            }
+
             lock (NextTurnLock) // must not process the request during a nextturn
             {
                 if (IsUserReady(from))
@@ -119,11 +125,16 @@
             }
         }
 
-        public void AddGameAction(IServerUser user, GameAction action)
+        public void AddGameAction(IServerUser user, LiveGameAction action)
         {
             if (action == null)
             {
                 OnIllegalAction(user, "Invalid game action");
+                return;
+            }
+            else if (action.Turn >= 0 && action.Turn != Turn)
+            {
+                _logger.LogDebug($"Dropping action of lagging user: {user}, {action}");
                 return;
             }
 
@@ -159,7 +170,7 @@
             foreach (var user in Users.Where(user => user.FullGameState))
                 user.Send(Packet.PacketTypeS2C.GameState, new GameState(GameIdentifier, this, user.Identifier));
             foreach (var serverUser in Users)
-                serverUser.Send(Packet.PacketTypeS2C.NextTurn);
+                serverUser.Send(Packet.PacketTypeS2C.NextTurn, new TurnEnd(Turn));
             _lastFrameSec = _time.Elapsed.TotalSeconds;
 
             _supervisor.GameEndedTurn(this, _tracker);

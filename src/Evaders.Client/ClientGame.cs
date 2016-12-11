@@ -4,6 +4,7 @@
     using System.Collections.Generic;
     using System.Linq;
     using CommonNetworking;
+    using CommonNetworking.CommonPayloads;
     using Core.Game;
     using Newtonsoft.Json;
 
@@ -55,7 +56,7 @@
         internal void RequestClientActions()
         {
             OnWaitingForActions?.Invoke(this, new GameEventArgs(this));
-            _connection.Send(Packet.PacketTypeC2S.TurnEnd);
+            _connection.Send(Packet.PacketTypeC2S.TurnEnd, new TurnEnd(Turn));
         }
 
         protected override void OnIllegalAction(ClientUser user, string warningMsg)
@@ -88,7 +89,7 @@
             if (!BeforeHandleAction(from, action))
                 return false;
 
-            _connection.Send(Packet.PacketTypeC2S.GameAction, action);
+            _connection.Send(Packet.PacketTypeC2S.GameAction, new LiveGameAction(action.Type, action.Position, action.ControlledEntityIdentifier, Turn));
             return true;
         }
 
